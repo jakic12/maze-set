@@ -43,7 +43,7 @@ class Maze {
         j < this.cells[i].length;
         j += i == 0 || i == this.cells.length - 1 ? 1 : this.cells[i].length - 1
       ) {
-        console.log(i, j);
+        // console.log(i, j);
         if (i == 0) {
           this.cells[i][j].walls[0] = true;
         }
@@ -190,11 +190,19 @@ class Line {
    * @returns a new linear function
    */
   getBounceFromWall(wallFunction) {
+    const ε = 0.000001;
     let intersect = this.intersection(wallFunction);
     let angleBetween = this.angleBetween(wallFunction);
 
     let newK = Math.tan(Math.atan(wallFunction.k) + angleBetween);
+
+    if (Math.abs(newK - this.k) < ε) {
+      newK = Math.tan(Math.atan(wallFunction.k) - angleBetween);
+      console.log("new k", newK);
+    }
+
     let newN = intersect.y - newK * intersect.x;
+    console.log("bounce", newK, newN);
     return new Line(newK, newN, true);
   }
 
@@ -206,8 +214,8 @@ class Line {
     if (this.k != line.k) {
       const x = (line.n - this.n) / (this.k - line.k);
       const out = { x, y: line.k * x + line.n };
-      if (!(line.intersectionValid(out) && this.intersectionValid(out)))
-        console.log(out, line.intersectionValid(out) ? this : line);
+      // if (!(line.intersectionValid(out) && this.intersectionValid(out)))
+      // console.log(out, line.intersectionValid(out) ? this : line);
       if (line.intersectionValid(out) && this.intersectionValid(out))
         return out;
     }
@@ -242,16 +250,10 @@ class Line {
 const distanceBetween = (a, b) =>
   Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
 
-const maze1 = new Maze(3);
-const startingPoint = { x: 20, y: 30 };
-const angle = 0.3;
-
-const ray1 = extendLine(startingPoint, angle);
-
-const extendLine = (startPoint, theta) => {
+const extendLine = (startPoint, theta, endX) => {
   const congruentTheta = theta % (Math.PI * 2);
   const x =
-    congruentTheta > -Math.PI / 2 && congruentTheta < Math.PI / 2
+    endX || (congruentTheta > -Math.PI / 2 && congruentTheta < Math.PI / 2)
       ? canvas.width
       : 0;
   return new Line(startPoint, {
@@ -268,53 +270,97 @@ const extendLine = (startPoint, theta) => {
   });
 };
 
+const maze1 = new Maze(3);
+const startingPoint = { x: 20, y: 30 };
+let angle = (Math.PI / 2) * 3 - 0.2;
+
+const bounceLimit = 200;
+
 maze1.calcRawWalls();
 
-const bounceLimit = 20;
-const rays = [ray1];
-const intersections = [startingPoint];
+// console.log(intersections);
 
-let lastAngle = angle;
-let iter = 0;
-while (true) {
-  const lastIntersection = intersections[intersections.length - 1];
-  let closest = maze1.rawWalls
-    .map(w => ({ inter: rays[rays.length - 1].intersection(w), wall: w }))
-    .filter(w => w.inter)
-    .reduce(
-      (prevValue, { inter, wall }) => {
-        const distance = distanceBetween(inter, lastIntersection);
-        if (prevValue.d > distance) {
-          return { d: distance, p: inter, w: wall };
-        } else {
-          return prevValue;
-        }
-      },
-      { d: Infinity }
-    );
-  const newRay = closest.w ? ray1.getBounceFromWall(closest.w) : false;
-  const startAbove = lastIntersection.y > closest.w.eval(lastIntersection.x);
-  const leftAboveWall = newRay.eval(0) < closest.w.eval(0);
-  const rightAboveWall =
-    newRay.eval(canvas.width) < closest.w.eval(canvas.width);
+const getBounces = (startPoint, angle, bounceLimit = 200) => {
+  const rays = [extendLine(startingPoint, angle)];
+  const intersections = [{ p: startPoint }];
 
-  rays.push(newRay);
-  intersections.push(closest.p);
-  if (
-    !newRay ||
-    bounceLimit < iter ||
-    newRay.distanceToPoint(startingPoint) < 0.01
-  ) {
-    break;
+  let lastAngle = angle;
+  let iter = 0;
+  console.log("newBounceChain");
+  while (true) {
+    const lastIntersection = intersections[intersections.length - 1];
+    const lastRay = rays[rays.length - 1];
+    let closest = maze1.rawWalls
+      .map(w => ({ inter: lastRay.intersection(w), wall: w }))
+      .filter(w => !!w.inter && lastIntersection.w != w.wall)
+      .reduce(
+        (prevValue, { inter, wall }) => {
+          const distance = distanceBetween(inter, lastIntersection.p);
+          console.log(distance, prevValue.d, prevValue.d > distance);
+          if (prevValue.d > distance) {
+            return { d: distance, p: inter, w: wall };
+          } else {
+            return prevValue;
+          }
+        },
+        { d: Infinity }
+      );
+    const newRayLinear = closest.w
+      ? lastRay.getBounceFromWall(closest.w)
+      : false;
+
+    if (!closest.w) {
+      console.log(`ray doesn't intersect with anything`, closest);
+      break;
+    }
+
+    const startAbove =
+      lastIntersection.p.y > closest.w.eval(lastIntersection.p.x);
+    const leftAboveWall = newRayLinear.eval(-10) < closest.w.eval(-10);
+    // const rightAboveWall = newRay.eval(canvas.width) < closest.w.eval(canvas.width);
+
+    if (startAbove == leftAboveWall) {
+      lastAngle = Math.atan(newRayLinear.k);
+    } else {
+      lastAngle = Math.atan(newRayLinear.k) + Math.PI;
+    }
+
+    const newRay = extendLine(closest.p, lastAngle);
+
+    rays.push(newRay);
+    intersections.push(closest);
+
+    if (
+      !newRay ||
+      bounceLimit < iter ||
+      newRay.distanceToPoint(startingPoint) < 0.01
+    ) {
+      break;
+    }
+    iter++;
   }
-  iter++;
-}
+
+  let prettyRays = [];
+  for (let i = 1; i < intersections.length; i++) {
+    prettyRays.push(new Line(intersections[i - 1].p, intersections[i].p));
+  }
+  return { rays, intersections, prettyRays };
+};
+
+let rays = getBounces(startingPoint, angle, bounceLimit).prettyRays;
+
+document.getElementById("angleSlider").addEventListener("input", e => {
+  angle = e.target.value;
+  rays = getBounces(startingPoint, angle, bounceLimit).prettyRays;
+});
 
 const refreshCanvas = () => {
+  // rays = getBounces(startingPoint, angle, bounceLimit).prettyRays;
+  // maze1.calcRawWalls();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   maze1.drawMaze();
 
-  rays.forEach(l => l.drawLinearFunction());
+  rays.forEach(l => l.drawLine());
 
   requestAnimationFrame(refreshCanvas);
 };
