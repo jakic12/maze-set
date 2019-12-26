@@ -197,12 +197,13 @@ class Line {
     let newK = Math.tan(Math.atan(wallFunction.k) + angleBetween);
 
     if (Math.abs(newK - this.k) < ε) {
+      // console.log("old k", newK);
       newK = Math.tan(Math.atan(wallFunction.k) - angleBetween);
-      console.log("new k", newK);
+      // console.log("new k", newK);
     }
 
     let newN = intersect.y - newK * intersect.x;
-    console.log("bounce", newK, newN);
+    // console.log("bounce", newK, newN);
     return new Line(newK, newN, true);
   }
 
@@ -271,10 +272,10 @@ const extendLine = (startPoint, theta, endX) => {
 };
 
 const maze1 = new Maze(3);
-const startingPoint = { x: 20, y: 30 };
+let startingPoint = { x: 20, y: 30 };
 let angle = (Math.PI / 2) * 3 - 0.2;
 
-const bounceLimit = 200;
+const bounceLimit = 400;
 
 maze1.calcRawWalls();
 
@@ -286,7 +287,8 @@ const getBounces = (startPoint, angle, bounceLimit = 200) => {
 
   let lastAngle = angle;
   let iter = 0;
-  console.log("newBounceChain");
+  const distanceE = 0.0000000000001;
+  // console.log("newBounceChain");
   while (true) {
     const lastIntersection = intersections[intersections.length - 1];
     const lastRay = rays[rays.length - 1];
@@ -296,8 +298,8 @@ const getBounces = (startPoint, angle, bounceLimit = 200) => {
       .reduce(
         (prevValue, { inter, wall }) => {
           const distance = distanceBetween(inter, lastIntersection.p);
-          console.log(distance, prevValue.d, prevValue.d > distance);
-          if (prevValue.d > distance) {
+          //console.log(distance, prevValue.d, prevValue.d > distance);
+          if (prevValue.d > distance && Math.abs(distance) > distanceE) {
             return { d: distance, p: inter, w: wall };
           } else {
             return prevValue;
@@ -321,7 +323,9 @@ const getBounces = (startPoint, angle, bounceLimit = 200) => {
 
     if (startAbove == leftAboveWall) {
       lastAngle = Math.atan(newRayLinear.k);
+      closest.p.x += 0.000001;
     } else {
+      closest.p.x -= 0.000001;
       lastAngle = Math.atan(newRayLinear.k) + Math.PI;
     }
 
@@ -347,20 +351,89 @@ const getBounces = (startPoint, angle, bounceLimit = 200) => {
   return { rays, intersections, prettyRays };
 };
 
-let rays = getBounces(startingPoint, angle, bounceLimit).prettyRays;
+const calcPointArrayBounces = (
+  angle,
+  startX = 0,
+  endX = canvas.width,
+  startY = 0,
+  endY = canvas.height,
+  step = 1
+) => {
+  const out = [];
+  for (let i = startY; i < endY; i += step) {
+    out.push([]);
+    for (let j = startX; j < endX; j++) {
+      const bounces = getBounces({ x: j, y: i }, angle);
+      out[i][j] = {
+        x: j,
+        y: i,
+        z: bounces.intersections.length,
+        debug: bounces
+      };
+    }
+    console.log(`progress: ${i - startY}/${endY}`);
+  }
+  console.log(out);
+
+  return out;
+};
+
+const drawPixel = (x, y, color) => {
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, 1, 1);
+};
+let singlePointMode = true;
+
+let rays;
+let pointBounces;
+if (singlePointMode)
+  rays = getBounces(startingPoint, angle, bounceLimit).prettyRays;
+else pointBounces = calcPointArrayBounces(angle);
 
 document.getElementById("angleSlider").addEventListener("input", e => {
   angle = e.target.value;
-  rays = getBounces(startingPoint, angle, bounceLimit).prettyRays;
+  if (singlePointMode)
+    rays = getBounces(startingPoint, angle, bounceLimit).prettyRays;
+  else pointBounces = calcPointArrayBounces(angle);
+  console.log(getBounces(startingPoint, angle, bounceLimit));
+});
+
+document.getElementById("debugMode").addEventListener("click", e => {
+  singlePointMode = !singlePointMode;
+  if (singlePointMode)
+    rays = getBounces(startingPoint, angle, bounceLimit).prettyRays;
+  else pointBounces = calcPointArrayBounces(angle);
+});
+
+canvas.addEventListener("click", e => {
+  if (singlePointMode) {
+    console.log();
+    console.log(e);
+
+    const mousex = e.screenX - canvas.getBoundingClientRect().x;
+    const mousey = e.screenY - canvas.getBoundingClientRect().y;
+    startingPoint = { x: mousex, y: mousey };
+    rays = getBounces(startingPoint, angle, bounceLimit).prettyRays;
+    console.log(getBounces(startingPoint, angle, bounceLimit));
+  }
 });
 
 const refreshCanvas = () => {
   // rays = getBounces(startingPoint, angle, bounceLimit).prettyRays;
   // maze1.calcRawWalls();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  maze1.drawMaze();
-
-  rays.forEach(l => l.drawLine());
+  if (singlePointMode) {
+    ctx.fillStyle = "black";
+    maze1.drawMaze();
+    rays.forEach(l => l.drawLine());
+  } else {
+    pointBounces.forEach(pArr =>
+      pArr.forEach(p => {
+        console.log(p.debug);
+        drawPixel(p.x, p.y, `hsl(${(p.z / bounceLimit) * 360}, 100%, 50%)`);
+      })
+    );
+  }
 
   requestAnimationFrame(refreshCanvas);
 };
