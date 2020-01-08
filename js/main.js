@@ -1,150 +1,16 @@
 const canvas = document.getElementById("mainCanvas");
 const ctx = canvas.getContext("2d");
 
-const getRandomBool = () => Math.random() > 0.5;
-
-const resizeCanvas = () => {
-  const wrapper = document;
-  if (window.innerHeight > window.innerWidth) {
-    canvas.width = window.innerWidth - 100;
-    canvas.height = window.innerWidth - 100;
-  } else {
-    canvas.width = window.innerHeight - 100;
-    canvas.height = window.innerHeight - 100;
+/**
+ * Shuffles array in place. ES6 version
+ * @param {Array} a items An array containing the items.
+ */
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
   }
-};
-
-window.onload = resizeCanvas();
-window.onresize = resizeCanvas;
-
-class Maze {
-  constructor(size) {
-    this.size = size;
-    this.cells = [];
-    for (let i = 0; i < size; i++) {
-      this.cells[i] = [];
-      for (let j = 0; j < size; j++) {
-        this.cells[i][j] = new Cell(
-          new Array(4).fill(0).map(e => getRandomBool())
-        );
-      }
-    }
-    this.calcRawWalls();
-  }
-  drawMaze() {
-    this.rawWalls.forEach(l => l.drawLine());
-  }
-
-  calcRawWalls() {
-    this.rawWalls = [];
-    for (let i = 0; i < this.cells.length; i++) {
-      for (
-        let j = 0;
-        j < this.cells[i].length;
-        j += i == 0 || i == this.cells.length - 1 ? 1 : this.cells[i].length - 1
-      ) {
-        // console.log(i, j);
-        if (i == 0) {
-          this.cells[i][j].walls[0] = true;
-        }
-
-        if (j == this.cells[i].length - 1) {
-          this.cells[i][j].walls[1] = true;
-        }
-
-        if (i == this.cells.length - 1) {
-          this.cells[i][j].walls[2] = true;
-        }
-
-        if (j == 0) {
-          this.cells[i][j].walls[3] = true;
-        }
-      }
-    }
-    this.cells.forEach((e, y) => {
-      e.forEach((c, x) => {
-        const x1 = x * this.cellWidth;
-        const y1 = y * this.cellHeight;
-        const y2 = y1 + this.cellHeight;
-        const x2 = x1 + this.cellWidth;
-
-        //console.log(x, y, x1, y1, x2, y2);
-
-        if (c.walls[0]) {
-          this.rawWalls.push(
-            new Line(
-              { x: x1 + Math.random(), y: y1 },
-              { x: x2 + +Math.random(), y: y1 }
-            )
-          );
-          //console.log({ x: x1, y: y1 }, { x: x2, y: y1 });
-        }
-        if (c.walls[1]) {
-          this.rawWalls.push(
-            new Line(
-              { x: x2 + Math.random(), y: y1 },
-              { x: x2 + +Math.random(), y: y2 }
-            )
-          );
-          //console.log({ x: x2, y: y1 }, { x: x2, y: y2 });
-        }
-        if (c.walls[2]) {
-          this.rawWalls.push(
-            new Line(
-              { x: x1 + Math.random(), y: y2 },
-              { x: x2 + +Math.random(), y: y2 }
-            )
-          );
-          //console.log({ x: x1, y: y2 }, { x: x2, y: y2 });
-        }
-        if (c.walls[3]) {
-          this.rawWalls.push(
-            new Line(
-              { x: x1 + Math.random(), y: y1 },
-              { x: x1 + +Math.random(), y: y2 }
-            )
-          );
-          //console.log({ x: x1, y: y1 }, { x: x1, y: y2 });
-        }
-      });
-    });
-
-    const uniqueWalls = [];
-    this.rawWalls.forEach(w => {
-      if (
-        uniqueWalls.filter(
-          w1 =>
-            (w1.a.x == w.a.x &&
-              w1.b.x == w.b.x &&
-              w1.a.y == w.a.y &&
-              w1.b.y == w.b.y) ||
-            (w1.a.x == w.b.x &&
-              w1.b.x == w.a.x &&
-              w1.a.y == w.b.y &&
-              w1.b.y == w.a.y)
-        ).length <= 1
-      ) {
-        uniqueWalls.push(w);
-      } else {
-        console.log("left out:", w);
-      }
-    });
-    this.rawWalls = uniqueWalls;
-  }
-
-  get cellWidth() {
-    return canvas.width / this.cells.length;
-  }
-
-  get cellHeight() {
-    return canvas.height / this.cells.length;
-  }
-}
-
-class Cell {
-  constructor(walls) {
-    this.walls = walls;
-  }
+  return a;
 }
 
 class Line {
@@ -171,17 +37,14 @@ class Line {
   }
 
   drawLine() {
-    ctx.beginPath();
-    ctx.moveTo(this.a.x, this.a.y);
-    ctx.lineTo(this.b.x, this.b.y);
-    ctx.stroke();
+    drawLine(this.a, this.b);
   }
 
   drawLinearFunction() {
-    ctx.beginPath();
-    ctx.moveTo(0, this.eval(0));
-    ctx.lineTo(ctx.canvas.width, this.eval(ctx.canvas.width));
-    ctx.stroke();
+    drawLine(
+      { x: 0, y: this.eval(0) },
+      { x: ctx.canvas.width, y: this.eval(ctx.canvas.width) }
+    );
   }
 
   /**
@@ -189,23 +52,7 @@ class Line {
    * @param {Line} wallFunction
    * @returns a new linear function
    */
-  getBounceFromWall(wallFunction) {
-    const ε = 0.000001;
-    let intersect = this.intersection(wallFunction);
-    let angleBetween = this.angleBetween(wallFunction);
-
-    let newK = Math.tan(Math.atan(wallFunction.k) + angleBetween);
-
-    if (Math.abs(newK - this.k) < ε) {
-      // console.log("old k", newK);
-      newK = Math.tan(Math.atan(wallFunction.k) - angleBetween);
-      // console.log("new k", newK);
-    }
-
-    let newN = intersect.y - newK * intersect.x;
-    // console.log("bounce", newK, newN);
-    return new Line(newK, newN, true);
-  }
+  getBounceFromWall(wallFunction) {}
 
   eval(x) {
     return this.k * x + this.n;
@@ -248,194 +95,240 @@ class Line {
   }
 }
 
-const distanceBetween = (a, b) =>
-  Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
-
-const extendLine = (startPoint, theta, endX) => {
-  const congruentTheta = theta % (Math.PI * 2);
-  const x =
-    endX || (congruentTheta > -Math.PI / 2 && congruentTheta < Math.PI / 2)
-      ? canvas.width
-      : 0;
-  return new Line(startPoint, {
-    x,
-    y: new Line(
-      startPoint,
-      {
-        x: startPoint.x + Math.cos(congruentTheta) * 2,
-        y: startPoint.y + Math.sin(congruentTheta) * 2
-      },
-      false,
-      true
-    ).eval(x)
-  });
-};
-
-const maze1 = new Maze(3);
-let startingPoint = { x: 20, y: 30 };
-let angle = (Math.PI / 2) * 3 - 0.2;
-
-const bounceLimit = 400;
-
-maze1.calcRawWalls();
-
-// console.log(intersections);
-
-const getBounces = (startPoint, angle, bounceLimit = 200) => {
-  const rays = [extendLine(startingPoint, angle)];
-  const intersections = [{ p: startPoint }];
-
-  let lastAngle = angle;
-  let iter = 0;
-  const distanceE = 0.0000000000001;
-  // console.log("newBounceChain");
-  while (true) {
-    const lastIntersection = intersections[intersections.length - 1];
-    const lastRay = rays[rays.length - 1];
-    let closest = maze1.rawWalls
-      .map(w => ({ inter: lastRay.intersection(w), wall: w }))
-      .filter(w => !!w.inter && lastIntersection.w != w.wall)
-      .reduce(
-        (prevValue, { inter, wall }) => {
-          const distance = distanceBetween(inter, lastIntersection.p);
-          //console.log(distance, prevValue.d, prevValue.d > distance);
-          if (prevValue.d > distance && Math.abs(distance) > distanceE) {
-            return { d: distance, p: inter, w: wall };
-          } else {
-            return prevValue;
-          }
-        },
-        { d: Infinity }
-      );
-    const newRayLinear = closest.w
-      ? lastRay.getBounceFromWall(closest.w)
-      : false;
-
-    if (!closest.w) {
-      console.log(`ray doesn't intersect with anything`, closest);
-      break;
-    }
-
-    const startAbove =
-      lastIntersection.p.y > closest.w.eval(lastIntersection.p.x);
-    const leftAboveWall = newRayLinear.eval(-10) < closest.w.eval(-10);
-    // const rightAboveWall = newRay.eval(canvas.width) < closest.w.eval(canvas.width);
-
-    if (startAbove == leftAboveWall) {
-      lastAngle = Math.atan(newRayLinear.k);
-      closest.p.x += 0.000001;
-    } else {
-      closest.p.x -= 0.000001;
-      lastAngle = Math.atan(newRayLinear.k) + Math.PI;
-    }
-
-    const newRay = extendLine(closest.p, lastAngle);
-
-    rays.push(newRay);
-    intersections.push(closest);
-
-    if (
-      !newRay ||
-      bounceLimit < iter ||
-      newRay.distanceToPoint(startingPoint) < 0.01
-    ) {
-      break;
-    }
-    iter++;
+class cell {
+  /**
+   *
+   * @param {*} pos
+   * @param {*} diagonal width and height of the cell => properties x,y
+   */
+  constructor(pos, diagonal, walls) {
+    this.pos = pos;
+    this.diagonal = diagonal;
+    this.walls = walls;
   }
 
-  let prettyRays = [];
-  for (let i = 1; i < intersections.length; i++) {
-    prettyRays.push(new Line(intersections[i - 1].p, intersections[i].p));
-  }
-  return { rays, intersections, prettyRays };
-};
+  /**
+   *
+   * @param {*} position 1 - top, 2 - right, 3 - bottom, 4 - left
+   */
+  getWallPosition(position) {
+    const a = {};
+    const b = {};
 
-const calcPointArrayBounces = (
-  angle,
-  startX = 0,
-  endX = canvas.width,
-  startY = 0,
-  endY = canvas.height,
-  step = 1
-) => {
-  const out = [];
-  for (let i = startY; i < endY; i += step) {
-    out.push([]);
-    for (let j = startX; j < endX; j++) {
-      const bounces = getBounces({ x: j, y: i }, angle);
-      out[i][j] = {
-        x: j,
-        y: i,
-        z: bounces.intersections.length,
-        debug: bounces
-      };
+    switch (position) {
+      case 1:
+        a.x = this.pos.x;
+        a.y = this.pos.y;
+        b.x = a.x + this.diagonal.x;
+        b.y = a.y;
+        break;
+      case 2:
+        a.x = this.pos.x + this.diagonal.x;
+        a.y = this.pos.y;
+        b.x = a.x;
+        b.y = a.y + this.diagonal.y;
+        break;
+      case 3:
+        a.x = this.pos.x;
+        a.y = this.pos.y + this.diagonal.y;
+        b.x = a.x + this.diagonal.x;
+        b.y = a.y;
+        break;
+      case 4:
+        a.x = this.pos.x;
+        a.y = this.pos.y;
+        b.x = a.x;
+        b.y = a.y + this.diagonal.y;
+        break;
     }
-    console.log(`progress: ${i - startY}/${endY}`);
+
+    return { a, b };
   }
-  console.log(out);
 
-  return out;
-};
-
-const drawPixel = (x, y, color) => {
-  ctx.fillStyle = color;
-  ctx.fillRect(x, y, 1, 1);
-};
-let singlePointMode = true;
-
-let rays;
-let pointBounces;
-if (singlePointMode)
-  rays = getBounces(startingPoint, angle, bounceLimit).prettyRays;
-else pointBounces = calcPointArrayBounces(angle);
-
-document.getElementById("angleSlider").addEventListener("input", e => {
-  angle = e.target.value;
-  if (singlePointMode)
-    rays = getBounces(startingPoint, angle, bounceLimit).prettyRays;
-  else pointBounces = calcPointArrayBounces(angle);
-  console.log(getBounces(startingPoint, angle, bounceLimit));
-});
-
-document.getElementById("debugMode").addEventListener("click", e => {
-  singlePointMode = !singlePointMode;
-  if (singlePointMode)
-    rays = getBounces(startingPoint, angle, bounceLimit).prettyRays;
-  else pointBounces = calcPointArrayBounces(angle);
-});
-
-canvas.addEventListener("click", e => {
-  if (singlePointMode) {
-    console.log();
-    console.log(e);
-
-    const mousex = e.screenX - canvas.getBoundingClientRect().x;
-    const mousey = e.screenY - canvas.getBoundingClientRect().y;
-    startingPoint = { x: mousex, y: mousey };
-    rays = getBounces(startingPoint, angle, bounceLimit).prettyRays;
-    console.log(getBounces(startingPoint, angle, bounceLimit));
+  drawWalls() {
+    this.walls.forEach((w, i) => {
+      if (w) {
+        const wallLine = this.getWallPosition(i + 1);
+        if (w == 2) withWidth(() => drawLine(wallLine.a, wallLine.b), 10);
+        else drawLine5(wallLine.a, wallLine.b);
+      }
+    });
   }
-});
+}
 
-const refreshCanvas = () => {
-  // rays = getBounces(startingPoint, angle, bounceLimit).prettyRays;
-  // maze1.calcRawWalls();
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (singlePointMode) {
-    ctx.fillStyle = "black";
-    maze1.drawMaze();
-    rays.forEach(l => l.drawLine());
-  } else {
-    pointBounces.forEach(pArr =>
-      pArr.forEach(p => {
-        console.log(p.debug);
-        drawPixel(p.x, p.y, `hsl(${(p.z / bounceLimit) * 360}, 100%, 50%)`);
+class maze {
+  constructor(cellCount) {
+    this.cells = [];
+    for (let i = 0; i < cellCount; i++) {
+      this.cells[i] = [];
+      for (let j = 0; j < cellCount; j++) {
+        this.cells[i].push(
+          new cell(
+            {
+              x: (canvas.width / cellCount) * j,
+              y: (canvas.height / cellCount) * i
+            },
+            { x: canvas.width / cellCount, y: canvas.height / cellCount },
+            new Array(4).fill(false) //.map(() => Math.random() > 0.5)
+          )
+        );
+      }
+    }
+
+    this.cells.forEach((r, i) =>
+      r.forEach((c, j) => {
+        if (i == 0) c.walls[0] = 2;
+
+        if (j == 0) c.walls[3] = 2;
+
+        if (i == cellCount - 1) c.walls[2] = 2;
+
+        if (j == cellCount - 1) c.walls[1] = 2;
       })
     );
+
+    this.generateWalls({ x: 0, y: 0 });
   }
 
-  requestAnimationFrame(refreshCanvas);
+  generateWalls(startPoint) {
+    this.visited = [];
+    this.getWalls(startPoint);
+  }
+
+  /**
+   *
+   * @param {Object} startPoint grid coordinate point eg.: (cell 2,3)
+   */
+  getWalls(startPoint) {
+    this.drawMaze();
+    const wallsToLookAt = shuffle([
+      { x: 0, y: -1 },
+      { x: 1, y: 0 },
+      { x: 0, y: 1 },
+      { x: -1, y: 0 }
+    ]);
+    wallsToLookAt.forEach(w => {
+      const newCoord = { x: startPoint.x + w.x, y: startPoint.y + w.y };
+      if (
+        newCoord.x < 0 ||
+        newCoord.y < 0 ||
+        newCoord.y >= this.cells.length ||
+        newCoord.x >= this.cells[0].length ||
+        this.visited.find(a => a.x == newCoord.x && a.y == newCoord.y) ||
+        (newCoord.x < startPoint.x && this.cellAt(startPoint).walls[3]) ||
+        (newCoord.x > startPoint.x && this.cellAt(startPoint).walls[1]) ||
+        (newCoord.y < startPoint.y && this.cellAt(startPoint).walls[0]) ||
+        (newCoord.y > startPoint.y && this.cellAt(startPoint).walls[2])
+      ) {
+      } else {
+        if (w.y == 0) {
+          if (
+            !this.visited.find(
+              a =>
+                this.cells[startPoint.y - 1] &&
+                a.x == startPoint.x &&
+                a.y == startPoint.y - 1
+            )
+          ) {
+            this.cellAt(startPoint).walls[0] = true;
+            if (this.cells[startPoint.y - 1]) {
+              this.cells[startPoint.y - 1][startPoint.x].walls[2] = true;
+            }
+          }
+          if (
+            !this.visited.find(
+              a =>
+                this.cells[startPoint.y + 1] &&
+                a.x == startPoint.x &&
+                a.y == startPoint.y + 1
+            )
+          ) {
+            this.cellAt(startPoint).walls[2] = true;
+            if (this.cells[startPoint.y + 1]) {
+              this.cells[startPoint.y + 1][startPoint.x].walls[0] = true;
+            }
+          }
+        } else {
+          if (
+            !this.visited.find(
+              a =>
+                this.cells[startPoint.y][startPoint.x + 1] &&
+                a.x == startPoint.x + 1 &&
+                a.y == startPoint.y
+            )
+          ) {
+            this.cellAt(startPoint).walls[1] = true;
+            if (this.cells[startPoint.y][startPoint.x + 1]) {
+              this.cells[startPoint.y][startPoint.x + 1].walls[3] = true;
+            }
+          }
+
+          if (
+            !this.visited.find(
+              a =>
+                this.cells[startPoint.y][startPoint.x - 1] &&
+                a.x == startPoint.x - 1 &&
+                a.y == startPoint.y
+            )
+          ) {
+            this.cellAt(startPoint).walls[3] = true;
+            if (this.cells[startPoint.y][startPoint.x - 1]) {
+              this.cells[startPoint.y][startPoint.x - 1].walls[1] = true;
+            }
+          }
+        }
+        this.drawMaze();
+        this.drawMaze();
+        this.getWalls(newCoord, [...this.visited, startPoint]);
+      }
+    });
+  }
+
+  cellAt(a) {
+    return this.cells[a.y][a.x];
+  }
+
+  drawMaze() {
+    this.cells.forEach(r => r.forEach(c => c.drawWalls()));
+  }
+}
+
+const resizeCanvas = () => {
+  const wrapper = document;
+  if (window.innerHeight > window.innerWidth) {
+    canvas.width = window.innerWidth - 100;
+    canvas.height = window.innerWidth - 100;
+  } else {
+    canvas.width = window.innerHeight - 100;
+    canvas.height = window.innerHeight - 100;
+  }
 };
 
-refreshCanvas();
+window.onload = resizeCanvas();
+window.onresize = resizeCanvas;
+
+const drawLine = (a, b) => {
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);
+  ctx.stroke();
+};
+
+const drawLine5 = (a, b) => {
+  withWidth(() => {
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }, 5);
+};
+
+const withWidth = (f, width, ...args) => {
+  const prevStroke = ctx.lineWidth;
+  ctx.lineWidth = width;
+  f(...args);
+  ctx.lineWidth = prevStroke;
+};
+
+maze1 = new maze(10);
+maze1.drawMaze();
