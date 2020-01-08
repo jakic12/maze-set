@@ -169,23 +169,11 @@ class maze {
               y: (canvas.height / cellCount) * i
             },
             { x: canvas.width / cellCount, y: canvas.height / cellCount },
-            new Array(4).fill(false) //.map(() => Math.random() > 0.5)
+            new Array(4).fill(true) //.map(() => Math.random() > 0.5)
           )
         );
       }
     }
-
-    this.cells.forEach((r, i) =>
-      r.forEach((c, j) => {
-        if (i == 0) c.walls[0] = 2;
-
-        if (j == 0) c.walls[3] = 2;
-
-        if (i == cellCount - 1) c.walls[2] = 2;
-
-        if (j == cellCount - 1) c.walls[1] = 2;
-      })
-    );
 
     this.generateWalls({ x: 0, y: 0 });
   }
@@ -195,17 +183,24 @@ class maze {
     this.getWalls(startPoint);
   }
 
+  cellVisited(cellIndices) {
+    return !!this.visited.find(
+      a => a.x == cellIndices.x && a.y == cellIndices.y
+    );
+  }
+
   /**
    *
    * @param {Object} startPoint grid coordinate point eg.: (cell 2,3)
    */
   getWalls(startPoint) {
     this.drawMaze();
+    this.visited.push(startPoint);
     const wallsToLookAt = shuffle([
-      { x: 0, y: -1 },
-      { x: 1, y: 0 },
-      { x: 0, y: 1 },
-      { x: -1, y: 0 }
+      { x: 0, y: -1, d: 0 },
+      { x: 1, y: 0, d: 1 },
+      { x: 0, y: 1, d: 2 },
+      { x: -1, y: 0, d: 3 }
     ]);
     wallsToLookAt.forEach(w => {
       const newCoord = { x: startPoint.x + w.x, y: startPoint.y + w.y };
@@ -214,72 +209,13 @@ class maze {
         newCoord.y < 0 ||
         newCoord.y >= this.cells.length ||
         newCoord.x >= this.cells[0].length ||
-        this.visited.find(a => a.x == newCoord.x && a.y == newCoord.y) ||
-        (newCoord.x < startPoint.x && this.cellAt(startPoint).walls[3]) ||
-        (newCoord.x > startPoint.x && this.cellAt(startPoint).walls[1]) ||
-        (newCoord.y < startPoint.y && this.cellAt(startPoint).walls[0]) ||
-        (newCoord.y > startPoint.y && this.cellAt(startPoint).walls[2])
+        this.cellVisited(newCoord)
       ) {
       } else {
-        if (w.y == 0) {
-          if (
-            !this.visited.find(
-              a =>
-                this.cells[startPoint.y - 1] &&
-                a.x == startPoint.x &&
-                a.y == startPoint.y - 1
-            )
-          ) {
-            this.cellAt(startPoint).walls[0] = true;
-            if (this.cells[startPoint.y - 1]) {
-              this.cells[startPoint.y - 1][startPoint.x].walls[2] = true;
-            }
-          }
-          if (
-            !this.visited.find(
-              a =>
-                this.cells[startPoint.y + 1] &&
-                a.x == startPoint.x &&
-                a.y == startPoint.y + 1
-            )
-          ) {
-            this.cellAt(startPoint).walls[2] = true;
-            if (this.cells[startPoint.y + 1]) {
-              this.cells[startPoint.y + 1][startPoint.x].walls[0] = true;
-            }
-          }
-        } else {
-          if (
-            !this.visited.find(
-              a =>
-                this.cells[startPoint.y][startPoint.x + 1] &&
-                a.x == startPoint.x + 1 &&
-                a.y == startPoint.y
-            )
-          ) {
-            this.cellAt(startPoint).walls[1] = true;
-            if (this.cells[startPoint.y][startPoint.x + 1]) {
-              this.cells[startPoint.y][startPoint.x + 1].walls[3] = true;
-            }
-          }
-
-          if (
-            !this.visited.find(
-              a =>
-                this.cells[startPoint.y][startPoint.x - 1] &&
-                a.x == startPoint.x - 1 &&
-                a.y == startPoint.y
-            )
-          ) {
-            this.cellAt(startPoint).walls[3] = true;
-            if (this.cells[startPoint.y][startPoint.x - 1]) {
-              this.cells[startPoint.y][startPoint.x - 1].walls[1] = true;
-            }
-          }
-        }
+        this.cellAt(startPoint).walls[w.d] = false;
+        this.cellAt(newCoord).walls[(w.d + 2) % 4] = false;
         this.drawMaze();
-        this.drawMaze();
-        this.getWalls(newCoord, [...this.visited, startPoint]);
+        this.getWalls(newCoord);
       }
     });
   }
@@ -289,6 +225,7 @@ class maze {
   }
 
   drawMaze() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     this.cells.forEach(r => r.forEach(c => c.drawWalls()));
   }
 }
@@ -330,5 +267,5 @@ const withWidth = (f, width, ...args) => {
   ctx.lineWidth = prevStroke;
 };
 
-maze1 = new maze(10);
+maze1 = new maze(20);
 maze1.drawMaze();
