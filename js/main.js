@@ -14,33 +14,17 @@ function shuffle(a) {
 }
 
 class Line {
-  /**
-   *
-   * @param {*} a point a or k
-   * @param {*} b point b or n
-   * @param {*} lineMode if this is true, you can init the Line with k and n
-   * @param {*} pointLineMode if this is true, you can init the line with a and b but they are not saved and a infinite linear function is made
-   */
-  constructor(a, b, lineMode, pointLineMode) {
-    if (!lineMode) {
-      if (!pointLineMode) {
-        this.a = a;
-        this.b = b;
-      }
-
-      this.k = (b.y - a.y) / (b.x - a.x);
-      this.n = (a.x * b.y - b.x * a.y) / (a.x - b.x);
-    } else {
-      this.k = a;
-      this.n = b;
+  constructor(props) {
+    if (props.k && props.n) {
+      this.k = props.k;
+      this.n = props.n;
+    } else if (props.k && props.a) {
+      this.k = props.k;
+      this.n = props.a.y - props.k * props.a.x;
     }
   }
 
   drawLine() {
-    drawLine(this.a, this.b);
-  }
-
-  drawLinearFunction() {
     drawLine(
       { x: 0, y: this.eval(0) },
       { x: ctx.canvas.width, y: this.eval(ctx.canvas.width) }
@@ -58,30 +42,15 @@ class Line {
     return this.k * x + this.n;
   }
 
+  inverse() {
+    return new Line({ k: 1 / this.k, n: -this.n / this.k });
+  }
+
   intersection(line) {
     if (this.k != line.k) {
       const x = (line.n - this.n) / (this.k - line.k);
       const out = { x, y: line.k * x + line.n };
-      // if (!(line.intersectionValid(out) && this.intersectionValid(out)))
-      // console.log(out, line.intersectionValid(out) ? this : line);
-      if (line.intersectionValid(out) && this.intersectionValid(out))
-        return out;
     }
-  }
-
-  intersectionValid(point) {
-    const errorMargin = 0.01;
-    return (
-      (!this.a && !this.b) ||
-      (((point.x >= this.a.x - errorMargin &&
-        point.x <= this.b.x + errorMargin) ||
-        (point.x >= this.b.x - errorMargin &&
-          point.x <= this.a.x + errorMargin)) &&
-        ((point.y >= this.a.y - errorMargin &&
-          point.y <= this.b.y + errorMargin) ||
-          (point.y >= this.b.y - errorMargin &&
-            point.y <= this.a.y + errorMargin)))
-    );
   }
 
   distanceToPoint(point) {
@@ -154,6 +123,35 @@ class cell {
       }
     });
   }
+
+  wallIntersections(line) {
+    const out = [];
+    [1, 2, 3, 4]
+      .filter((e, i) => this.walls[e - 1])
+      .forEach(e => {
+        const wallPos = this.getWallPosition(e);
+        if (e % 2 == 0) {
+          const y0 = line.eval(wallPos.a.x);
+          if (
+            wallPos.a.y < wallPos.b.y
+              ? wallPos.a.y <= y0 && y0 <= wallPos.b.y
+              : wallPos.a.y >= y0 && y0 >= wallPos.b.y
+          ) {
+            out.push({ x: wallPos.a.x, y: y0 });
+          }
+        } else {
+          const x0 = line.inverse().eval(wallPos.a.y);
+          if (
+            wallPos.a.x < wallPos.b.x
+              ? wallPos.a.x <= x0 && x0 <= wallPos.b.x
+              : wallPos.a.x >= x0 && x0 >= wallPos.b.x
+          ) {
+            out.push({ y: wallPos.a.y, x: x0 });
+          }
+        }
+      });
+    return out;
+  }
 }
 
 class maze {
@@ -176,6 +174,59 @@ class maze {
     }
 
     this.generateWalls({ x: 0, y: 0 });
+    this.bounceFromPoint({ x: 100, y: 100 }, 1);
+  }
+
+  bounceFromPoint(point, angle) {
+    drawPoint(point);
+    angle = angle % (2 * Math.PI);
+    const rays = [new Line({ k: Math.atan(angle), a: point })];
+    rays[rays.length - 1].drawLine();
+    let rayPositive =
+      (angle > -Math.PI / 2 && angle < Math.PI / 2) ||
+      angle > (Math.PI * 3) / 2;
+
+    const cells = this.getCellsThatIntersect(
+      point,
+      rays[rays.length - 1],
+      rayPositive
+    );
+    const cellIntersections = [].concat(
+      ...cells.map(c => c.wallIntersections(rays[rays.length - 1]))
+    );
+
+    drawPoint(
+      cellIntersections.reduce(
+        (prev, p) => {
+          const d = distanceBetweenPoints(point, p);
+          return distanceBetweenPoints(point, p) < prev ? { p, d } : prev;
+        },
+        {
+          p: cellIntersections[0],
+          d: distanceBetweenPoints(point, cellIntersections[0])
+        }
+      ).p
+    );
+
+    console.log(cellIntersections);
+  }
+
+  getCellsThatIntersect(startPoint, line, rayPositive) {
+    const out = [];
+    this.cells.forEach((r, i) =>
+      r.forEach((c, j) => {
+        const y1 = line.eval(c.pos.x + c.diagonal.x / 2);
+        if (
+          !rayPositive ^ (startPoint.x < c.pos.x + c.diagonal.x) &&
+          c.pos.y < y1 &&
+          c.pos.y + c.diagonal.y > y1
+        ) {
+          out.push(c);
+        }
+      })
+    );
+
+    return out;
   }
 
   generateWalls(startPoint) {
@@ -244,11 +295,21 @@ const resizeCanvas = () => {
 window.onload = resizeCanvas();
 window.onresize = resizeCanvas;
 
+const distanceBetweenPoints = (a, b) =>
+  Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+
 const drawLine = (a, b) => {
   ctx.beginPath();
   ctx.moveTo(a.x, a.y);
   ctx.lineTo(b.x, b.y);
   ctx.stroke();
+};
+
+const drawPoint = (a, r = 10) => {
+  ctx.beginPath();
+  ctx.arc(a.x, a.y, r, 0, Math.PI * 2, true);
+  ctx.stroke();
+  ctx.fill();
 };
 
 const drawLine5 = (a, b) => {
@@ -268,4 +329,4 @@ const withWidth = (f, width, ...args) => {
 };
 
 maze1 = new maze(20);
-maze1.drawMaze();
+//maze1.drawMaze();
