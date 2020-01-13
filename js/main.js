@@ -1,6 +1,8 @@
 const canvas = document.getElementById("mainCanvas");
 const ctx = canvas.getContext("2d");
 
+const angleSlider = document.getElementById("angleSlider");
+
 /**
  * Shuffles array in place. ES6 version
  * @param {Array} a items An array containing the items.
@@ -15,12 +17,19 @@ function shuffle(a) {
 
 class Line {
   constructor(props) {
-    if (props.k && props.n) {
+    if (props.k != undefined && props.n != undefined) {
       this.k = props.k;
       this.n = props.n;
-    } else if (props.k && props.a) {
+    } else if (props.k != undefined && props.a != undefined) {
       this.k = props.k;
       this.n = props.a.y - props.k * props.a.x;
+      this.a = props.a;
+    } else if (props.a != undefined && props.b != undefined) {
+      this.k = (props.a.y - props.b.y) / (props.a.x - props.b.x);
+      this.n = props.a.y - this.k * props.a.x;
+
+      this.a = props.a;
+      this.b = props.b;
     }
   }
 
@@ -30,13 +39,6 @@ class Line {
       { x: ctx.canvas.width, y: this.eval(ctx.canvas.width) }
     );
   }
-
-  /**
-   *
-   * @param {Line} wallFunction
-   * @returns a new linear function
-   */
-  getBounceFromWall(wallFunction) {}
 
   eval(x) {
     return this.k * x + this.n;
@@ -49,7 +51,7 @@ class Line {
   intersection(line) {
     if (this.k != line.k) {
       const x = (line.n - this.n) / (this.k - line.k);
-      const out = { x, y: line.k * x + line.n };
+      return { x, y: line.k * x + line.n };
     }
   }
 
@@ -133,20 +135,18 @@ class cell {
         if (e % 2 == 0) {
           const y0 = line.eval(wallPos.a.x);
           if (
-            wallPos.a.y < wallPos.b.y
-              ? wallPos.a.y <= y0 && y0 <= wallPos.b.y
-              : wallPos.a.y >= y0 && y0 >= wallPos.b.y
+            (wallPos.a.y >= y0 && y0 >= wallPos.b.y) ||
+            (wallPos.a.y <= y0 && y0 <= wallPos.b.y)
           ) {
-            out.push({ x: wallPos.a.x, y: y0 });
+            out.push({ x: wallPos.a.x, y: y0, horizontal: false });
           }
-        } else {
+        } else if (line.k != 0) {
           const x0 = line.inverse().eval(wallPos.a.y);
           if (
-            wallPos.a.x < wallPos.b.x
-              ? wallPos.a.x <= x0 && x0 <= wallPos.b.x
-              : wallPos.a.x >= x0 && x0 >= wallPos.b.x
+            (wallPos.a.x >= x0 && x0 >= wallPos.b.x) ||
+            (wallPos.a.x <= x0 && x0 <= wallPos.b.x)
           ) {
-            out.push({ y: wallPos.a.y, x: x0 });
+            out.push({ y: wallPos.a.y, x: x0, horizontal: true });
           }
         }
       });
@@ -174,59 +174,83 @@ class maze {
     }
 
     this.generateWalls({ x: 0, y: 0 });
-    this.bounceFromPoint({ x: 100, y: 100 }, 1);
   }
 
-  bounceFromPoint(point, angle) {
-    drawPoint(point);
+  bounceFromPoint(point, angle, maxSteps = 100, drawLines = false) {
+    if (drawLines) drawPoint(point);
     angle = angle % (2 * Math.PI);
-    const rays = [new Line({ k: Math.atan(angle), a: point })];
-    rays[rays.length - 1].drawLine();
-    let rayPositive =
-      (angle > -Math.PI / 2 && angle < Math.PI / 2) ||
-      angle > (Math.PI * 3) / 2;
+    const rays = [
+      {
+        startPoint: point,
+        line: new Line({
+          a: point,
+          k: Math.tan(angle)
+        }),
+        positive:
+          (angle > -Math.PI / 2 && angle < Math.PI / 2) ||
+          angle > (Math.PI * 3) / 2
+      }
+    ];
+    let i;
+    for (i = 0; i < maxSteps; i++) {
+      const lastRay = rays[rays.length - 1];
+      if (drawLines) {
+        lastRay.line.drawLine();
+        drawPoint(lastRay.startPoint);
+      }
+      const cellIntersections = []
+        .concat(
+          ...this.cells.map(r =>
+            [].concat(...r.map(c => c.wallIntersections(lastRay.line)))
+          )
+        )
+        .filter(p => lastRay.positive ^ (p.x < lastRay.startPoint.x))
+        .filter(p => distanceBetweenPoints(lastRay.startPoint, p) > 0.001);
 
-    const cells = this.getCellsThatIntersect(
-      point,
-      rays[rays.length - 1],
-      rayPositive
-    );
-    const cellIntersections = [].concat(
-      ...cells.map(c => c.wallIntersections(rays[rays.length - 1]))
-    );
+      if (cellIntersections.length > 0) {
+        const {
+          p: closestPoint,
+          d: distanceToClosestPoint
+        } = cellIntersections.reduce(
+          (prev, p) => {
+            const d = distanceBetweenPoints(lastRay.startPoint, p);
+            return d < prev.d ? { p, d } : prev;
+          },
+          {
+            p: cellIntersections[0],
+            d: distanceBetweenPoints(lastRay.startPoint, cellIntersections[0])
+          }
+        );
 
-    drawPoint(
-      cellIntersections.reduce(
-        (prev, p) => {
-          const d = distanceBetweenPoints(point, p);
-          return distanceBetweenPoints(point, p) < prev ? { p, d } : prev;
-        },
-        {
-          p: cellIntersections[0],
-          d: distanceBetweenPoints(point, cellIntersections[0])
+        const newRayPositive = closestPoint.horizontal
+          ? lastRay.positive
+          : !lastRay.positive;
+
+        rays.push({
+          startPoint: closestPoint,
+          line: new Line({
+            a: closestPoint,
+            k: -lastRay.line.k
+          }),
+          positive: newRayPositive
+        });
+
+        if (i > 0) {
+          const closestPointToStart = new Line({
+            k: -1 / lastRay.line.k,
+            a: point
+          }).intersection(lastRay.line);
+          if (
+            distanceBetweenPoints(closestPointToStart, point) <
+              distanceToClosestPoint &&
+            lastRay.line.distanceToPoint(point) < 1
+          ) {
+            break;
+          }
         }
-      ).p
-    );
-
-    console.log(cellIntersections);
-  }
-
-  getCellsThatIntersect(startPoint, line, rayPositive) {
-    const out = [];
-    this.cells.forEach((r, i) =>
-      r.forEach((c, j) => {
-        const y1 = line.eval(c.pos.x + c.diagonal.x / 2);
-        if (
-          !rayPositive ^ (startPoint.x < c.pos.x + c.diagonal.x) &&
-          c.pos.y < y1 &&
-          c.pos.y + c.diagonal.y > y1
-        ) {
-          out.push(c);
-        }
-      })
-    );
-
-    return out;
+      }
+    }
+    return rays;
   }
 
   generateWalls(startPoint) {
@@ -275,8 +299,8 @@ class maze {
     return this.cells[a.y][a.x];
   }
 
-  drawMaze() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawMaze(clear = false) {
+    if (clear) ctx.clearRect(0, 0, canvas.width, canvas.height);
     this.cells.forEach(r => r.forEach(c => c.drawWalls()));
   }
 }
@@ -305,7 +329,7 @@ const drawLine = (a, b) => {
   ctx.stroke();
 };
 
-const drawPoint = (a, r = 10) => {
+const drawPoint = (a, r = 5) => {
   ctx.beginPath();
   ctx.arc(a.x, a.y, r, 0, Math.PI * 2, true);
   ctx.stroke();
@@ -328,5 +352,48 @@ const withWidth = (f, width, ...args) => {
   ctx.lineWidth = prevStroke;
 };
 
-maze1 = new maze(20);
-//maze1.drawMaze();
+const withFillStyle = (f, color, ...args) => {
+  const prevStroke = ctx.fillStyle;
+  ctx.fillStyle = color;
+  f(...args);
+  ctx.fillStyle = prevStroke;
+};
+
+maze1 = new maze(10);
+drawPixels(maze1, 2, 500, 1);
+// drawSlowly(maze1, 1, 200, 100, 1, 1);
+
+function drawSlowly(maze, angle, maxSteps = 100, start, end, step) {
+  if (start >= end) {
+    drawPixels(maze, angle, maxSteps, start);
+    console.log(`${start}/${end}`);
+    requestAnimationFrame(() =>
+      drawSlowly(maze, angle, maxSteps, start - step, end, step)
+    );
+  }
+}
+
+function drawPixels(maze, angle, maxSteps = 100, step = 100) {
+  for (let i = 0; i < canvas.width; i += step) {
+    console.log(i, canvas.width);
+    for (let j = 0; j < canvas.height; j += step) {
+      let bounces =
+        maze.bounceFromPoint(
+          { x: i + step / 2, y: j + step / 2 },
+          angle,
+          maxSteps
+        ).length - 1;
+      withFillStyle(
+        () => ctx.fillRect(i, j, step, step),
+        `hsl(${(bounces / maxSteps) * 60 + 240}, 100%, 50%)`
+      );
+    }
+  }
+  maze.drawMaze();
+}
+
+angleSlider.addEventListener("input", () => {
+  console.log((+angleSlider.value / Math.PI) * 180);
+  maze1.drawMaze();
+  drawPixels(maze, +angleSlider.value);
+});
