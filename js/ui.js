@@ -18,6 +18,11 @@ const showDownloadButton = (show, url) => {
   downloadButton.href = url;
 };
 
+const estimatedTimeOut = document.getElementById("estimatedTime");
+const setEstimatedTime = time => {
+  estimatedTimeOut.innerText = time;
+};
+
 // CONTROLLS
 
 const stopAndWait = callback => {
@@ -49,16 +54,17 @@ const rotateAngleTo = document.getElementById("rotateAngleTo");
 const rotateResolution = document.getElementById("rotateResolution");
 const rotateDraw = document.getElementById("rotateDraw");
 rotateDraw.addEventListener("click", () => {
-  stopAndWait(() => {
-    rotate(
-      maze1,
-      200,
-      Math.round(100 / +rotateResolution.value),
-      +rotateAngleFrom.value,
-      +rotateAngleTo.value,
-      0.1
-    );
-  });
+  if (rotateAngleFrom.value < rotateAngleTo.value)
+    stopAndWait(() => {
+      rotate(
+        maze1,
+        200,
+        Math.round(100 / +rotateResolution.value),
+        +rotateAngleFrom.value,
+        +rotateAngleTo.value,
+        0.1
+      );
+    });
 });
 
 const resAngle = document.getElementById("resAngle");

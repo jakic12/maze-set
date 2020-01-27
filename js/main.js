@@ -308,12 +308,17 @@ class maze {
 
 const resizeCanvas = () => {
   const wrapper = document;
-  if (window.innerHeight > window.innerWidth) {
-    canvas.width = window.innerWidth - 300;
-    canvas.height = window.innerWidth - 300;
+  if (window.innerWidth > 700 && window.innerHeight > 700) {
+    if (window.innerHeight > window.innerWidth) {
+      canvas.width = window.innerWidth - 300;
+      canvas.height = window.innerWidth - 300;
+    } else {
+      canvas.width = window.innerHeight - 300;
+      canvas.height = window.innerHeight - 300;
+    }
   } else {
-    canvas.width = window.innerHeight - 300;
-    canvas.height = window.innerHeight - 300;
+    canvas.width = 400;
+    canvas.height = 400;
   }
 };
 
@@ -372,11 +377,7 @@ const drawProgress = percentage => {
 maze1 = new maze(10);
 let outputGif = true;
 
-var gif = new GIF({
-  workers: 2,
-  quality: 10,
-  delay: 10
-});
+gif = null;
 
 // drawPixels(maze1, 2, 200, 2);
 // drawSlowly(maze1, 1, 200, 100, 1, 1);
@@ -384,6 +385,13 @@ animationRunning = false;
 animationShouldStop = false;
 
 function drawSlowly(maze, angle, maxSteps = 100, start, end, step) {
+  if (!gif) {
+    gif = new GIF({
+      workers: 2,
+      quality: 10,
+      delay: 2
+    });
+  }
   animationRunning = true;
   if (start >= end && !animationShouldStop) {
     drawPixels(maze, angle, maxSteps, start, 0, false);
@@ -403,6 +411,7 @@ function drawSlowly(maze, angle, maxSteps = 100, start, end, step) {
       console.log(`url:`, url);
       // downloadUrl(url);
       showDownloadButton(true, url);
+      gif = null;
     });
     gif.on("progress", function(percentage) {
       setProgressBarProgress(percentage);
@@ -413,9 +422,16 @@ function drawSlowly(maze, angle, maxSteps = 100, start, end, step) {
 }
 
 async function rotate(maze, maxSteps, step, startAngle, endAngle, angleStep) {
+  if (!gif) {
+    gif = new GIF({
+      workers: 2,
+      quality: 10,
+      delay: 2
+    });
+  }
   animationRunning = true;
   if (startAngle <= endAngle && !animationShouldStop) {
-    await drawPixelsBetter({ maze, startAngle, maxSteps, step });
+    await drawPixelsBetter({ maze, angle: startAngle, maxSteps, step });
     console.log(`angle:`, startAngle);
     if (outputGif) {
       gif.addFrame(ctx.getImageData(0, 0, canvas.width, canvas.height));
@@ -432,6 +448,7 @@ async function rotate(maze, maxSteps, step, startAngle, endAngle, angleStep) {
       console.log(`url:`, url);
       // downloadUrl(url);
       showDownloadButton(true, url);
+      gif = null;
     });
     gif.on("progress", function(percentage) {
       setProgressBarProgress(percentage);

@@ -16,6 +16,9 @@
             </div>
           </div>
           <div class="controls">
+            <div class="timeEstimation">
+              <p>est. time: <span id="estimatedTime"></span></p>
+            </div>
             <div class="smallCard">
               <div class="head">
                 <h5>draw with angle</h5>
@@ -118,7 +121,12 @@
       <div id="downloadProgressParent">
         <div id="progressBar"></div>
       </div>
-      <a id="downloadButton" style="display:none">
+      <a
+        id="downloadButton"
+        target="_blank"
+        style="display:none"
+        download="output.gif"
+      >
         <img src="img/download.png" alt="download button"
       /></a>
     </div>

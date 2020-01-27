@@ -13,18 +13,27 @@ body {
 
 #mainCanvas {
   position: relative;
+  margin: 20px 10px 0 0;
+  border-radius: 3px;
+  background: white;
+  overflow: hidden;
+  box-shadow: 0 6px 10px 0 rgba(0, 0, 0, 0.14), 0 1px 18px 0 rgba(0, 0, 0, 0.12),
+    0 3px 5px -1px rgba(0, 0, 0, 0.2);
 }
 
 .page {
-  background: white;
+  /* background: white; */
   margin: 100px 0 100px 0;
-  width: 70vw;
-  border-radius: 10px;
+  width: 100vw;
+  border-radius: 3px;
 }
 
 @media only screen and (max-width: 900px) {
   .page {
     width: 100vw;
+    margin: 0;
+    border-radius: 0px;
+    height: 100vh;
   }
 }
 
@@ -40,11 +49,19 @@ body {
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: center;
+  justify-content: space-evenly;
   flex-wrap: wrap;
+  width: 100%;
 }
 .controls {
-  padding: 20px;
+  height: 100%;
+  padding: 10px;
+  margin: 20px 10px 0 0;
+  border-radius: 3px;
+  box-shadow: 0 6px 10px 0 rgba(0, 0, 0, 0.14), 0 1px 18px 0 rgba(0, 0, 0, 0.12),
+    0 3px 5px -1px rgba(0, 0, 0, 0.2);
+  background: rgb(32, 33, 36);
+  color: white;
 }
 
 /* download bar */
