@@ -7,10 +7,89 @@ body {
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  height: 100vh;
+  min-height: 100vh;
+  background: rgb(51, 54, 57);
 }
 
-#canvasWrapper {
-  height: 100vh;
-  width: 100vw;
+#mainCanvas {
+  position: relative;
 }
+
+.page {
+  background: white;
+  margin: 100px 0 100px 0;
+  width: 70vw;
+  border-radius: 10px;
+}
+
+@media only screen and (max-width: 900px) {
+  .page {
+    width: 100vw;
+  }
+}
+
+.pageSection {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+}
+
+.maze-demo {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.controls {
+  padding: 20px;
+}
+
+/* download bar */
+#downloadProgressParent {
+  /* width: 100%; */
+  height: 30px;
+  flex-grow: 1;
+}
+
+#downloadContainter {
+  width: 100%;
+  bottom: 0;
+  height: 30px;
+  position: fixed;
+  background: black;
+  display: flex;
+  flex-direction: row;
+}
+
+#progressBar {
+  background: #2ecc71;
+  height: 30px;
+}
+
+#downloadButton {
+  background: #2ecc71;
+}
+
+#downloadButton img {
+  width: 30px;
+  height: 30px;
+  flex: 1;
+  flex-grow: 0;
+}
+/* download bar */
+
+/* canvas progress bar */
+#canvasProgressWrapper {
+  position: relative;
+  transition: width 0.1s;
+  height: 10px;
+}
+#canvasProgressInner {
+  width: 0%;
+  height: 100%;
+  background: #2ecc71;
+}
+/* canvas progress bar */

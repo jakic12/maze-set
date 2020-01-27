@@ -1,7 +1,7 @@
 const canvas = document.getElementById("mainCanvas");
 const ctx = canvas.getContext("2d");
 
-const angleSlider = document.getElementById("angleSlider");
+const mazeColor = { r: 46, g: 204, b: 112 };
 
 /**
  * Shuffles array in place. ES6 version
@@ -117,6 +117,7 @@ class cell {
   }
 
   drawWalls() {
+    ctx.strokeStyle = `#fff`;
     this.walls.forEach((w, i) => {
       if (w) {
         const wallLine = this.getWallPosition(i + 1);
@@ -308,16 +309,20 @@ class maze {
 const resizeCanvas = () => {
   const wrapper = document;
   if (window.innerHeight > window.innerWidth) {
-    canvas.width = window.innerWidth - 100;
-    canvas.height = window.innerWidth - 100;
+    canvas.width = window.innerWidth - 300;
+    canvas.height = window.innerWidth - 300;
   } else {
-    canvas.width = window.innerHeight - 100;
-    canvas.height = window.innerHeight - 100;
+    canvas.width = window.innerHeight - 300;
+    canvas.height = window.innerHeight - 300;
   }
 };
 
+const clearCanvas = () => {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+};
+
 window.onload = resizeCanvas();
-window.onresize = resizeCanvas;
+// window.onresize = resizeCanvas;
 
 const distanceBetweenPoints = (a, b) =>
   Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
@@ -359,22 +364,94 @@ const withFillStyle = (f, color, ...args) => {
   ctx.fillStyle = prevStroke;
 };
 
+const drawProgress = percentage => {
+  document.getElementById("canvasProgressInner").style.width = `${percentage *
+    100}%`;
+};
+
 maze1 = new maze(10);
-drawPixels(maze1, 2, 500, 1);
+let outputGif = true;
+
+var gif = new GIF({
+  workers: 2,
+  quality: 10,
+  delay: 10
+});
+
+// drawPixels(maze1, 2, 200, 2);
 // drawSlowly(maze1, 1, 200, 100, 1, 1);
+animationRunning = false;
+animationShouldStop = false;
 
 function drawSlowly(maze, angle, maxSteps = 100, start, end, step) {
-  if (start >= end) {
-    drawPixels(maze, angle, maxSteps, start);
+  animationRunning = true;
+  if (start >= end && !animationShouldStop) {
+    drawPixels(maze, angle, maxSteps, start, 0, false);
+    if (outputGif) {
+      gif.addFrame(ctx.getImageData(0, 0, canvas.width, canvas.height));
+    }
     console.log(`${start}/${end}`);
+    drawProgress(start / end);
     requestAnimationFrame(() =>
       drawSlowly(maze, angle, maxSteps, start - step, end, step)
     );
+  } else {
+    animationRunning = false;
+    showProgressBar(true);
+    gif.on("finished", function(blob) {
+      const url = URL.createObjectURL(blob);
+      console.log(`url:`, url);
+      // downloadUrl(url);
+      showDownloadButton(true, url);
+    });
+    gif.on("progress", function(percentage) {
+      setProgressBarProgress(percentage);
+    });
+
+    gif.render();
   }
 }
 
-function drawPixels(maze, angle, maxSteps = 100, step = 100) {
-  for (let i = 0; i < canvas.width; i += step) {
+async function rotate(maze, maxSteps, step, startAngle, endAngle, angleStep) {
+  animationRunning = true;
+  if (startAngle <= endAngle && !animationShouldStop) {
+    await drawPixelsBetter({ maze, startAngle, maxSteps, step });
+    console.log(`angle:`, startAngle);
+    if (outputGif) {
+      gif.addFrame(ctx.getImageData(0, 0, canvas.width, canvas.height));
+    }
+    drawProgress(startAngle / endAngle);
+    requestAnimationFrame(() =>
+      rotate(maze, maxSteps, step, startAngle + angleStep, endAngle, angleStep)
+    );
+  } else if (outputGif) {
+    animationRunning = false;
+    showProgressBar(true);
+    gif.on("finished", function(blob) {
+      const url = URL.createObjectURL(blob);
+      console.log(`url:`, url);
+      // downloadUrl(url);
+      showDownloadButton(true, url);
+    });
+    gif.on("progress", function(percentage) {
+      setProgressBarProgress(percentage);
+    });
+
+    gif.render();
+  }
+}
+
+function drawPixels(
+  maze,
+  angle,
+  maxSteps = 100,
+  step = 100,
+  i = 0,
+  progress = true
+) {
+  if (i == 0) clearCanvas();
+  animationRunning = true;
+  if (i < canvas.width && !animationShouldStop) {
     console.log(i, canvas.width);
     for (let j = 0; j < canvas.height; j += step) {
       let bounces =
@@ -385,15 +462,67 @@ function drawPixels(maze, angle, maxSteps = 100, step = 100) {
         ).length - 1;
       withFillStyle(
         () => ctx.fillRect(i, j, step, step),
-        `hsl(${(bounces / maxSteps) * 60 + 240}, 100%, 50%)`
+        // `hsl(${(bounces / maxSteps) * 60 + 240}, 100%, 50%)`
+        `rgb(${(bounces / maxSteps) * mazeColor.r}, ${(bounces / maxSteps) *
+          mazeColor.g}, ${(bounces / maxSteps) * mazeColor.b})`
       );
     }
+    if (progress) drawProgress(i / canvas.width);
+    requestAnimationFrame(() =>
+      drawPixels(maze, angle, maxSteps, step, i + step)
+    );
+  } else {
+    animationRunning = false;
   }
   maze.drawMaze();
 }
 
-angleSlider.addEventListener("input", () => {
-  console.log((+angleSlider.value / Math.PI) * 180);
-  maze1.drawMaze();
-  drawPixels(maze, +angleSlider.value);
-});
+const drawPixelsBetter = ({ maze, angle, maxSteps, step, progress }) => {
+  return new Promise(res => {
+    animationIteratorPromise(0, canvas.width, step, i => {
+      console.log(i, canvas.width);
+      for (let j = 0; j < canvas.height; j += step) {
+        let bounces =
+          maze.bounceFromPoint(
+            { x: i + step / 2, y: j + step / 2 },
+            angle,
+            maxSteps
+          ).length - 1;
+        withFillStyle(
+          () => ctx.fillRect(i, j, step, step),
+          // `hsl(${(bounces / maxSteps) * 60 + 240}, 100%, 50%)`
+          `rgb(${(bounces / maxSteps) * mazeColor.r}, ${(bounces / maxSteps) *
+            mazeColor.g}, ${(bounces / maxSteps) * mazeColor.b})`
+        );
+      }
+      if (progress) drawProgress(i / canvas.width);
+    }).then(() => {
+      res();
+    });
+  });
+};
+
+const animationIterator = (from, to, step, iteratorFunction, callback) => {
+  if (from < to) {
+    iteratorFunction(from);
+    requestAnimationFrame(() =>
+      animationIterator(from + step, to, step, iteratorFunction, callback)
+    );
+  } else {
+    callback();
+  }
+};
+
+const animationIteratorPromise = (from, to, step, iteratorFunction) =>
+  new Promise(res => {
+    animationIterator(from, to, step, iteratorFunction, res);
+  });
+
+(async () => {
+  await animationIteratorPromise(0, 10, 1, console.log);
+  console.log(`DONE`);
+})();
+
+// angle:2.1
+// res: 25
+// time: 25.8
