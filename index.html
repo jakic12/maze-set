@@ -12,9 +12,40 @@
   <body>
     <div class="page noMargin">
       <div class="page white">
+        <h1>Maze bounce set</h1>
         <div class="pageSection">
-          <h1>test</h1>
-          <p>test</p>
+          <h2>The idea</h2>
+          <p>
+            The idea was, what happens when you bounce a ray arround a maze, how
+            many times does it bounce before it comes back, what depends on this
+            number of bounces. So I decided to visualise this.
+          </p>
+          <p>
+            This visualisation shows, how many times a ray needs to bounce back
+            from every frame if fired from a certain angle.
+          </p>
+        </div>
+        <div class="pageSection">
+          <h2>The algorithm</h2>
+          <p>
+            parameters:
+          </p>
+          <ul>
+            <li><b>angle</b> - the angle at which the ray will be from</li>
+            <li>
+              <b>resolution</b> - how many times the canvas will be divided
+            </li>
+          </ul>
+
+          <ol>
+            <li>Choose a starting point</li>
+            <li>Make a ray (linear function) at the requested angle</li>
+            <li>Bounce the ray from the first wall</li>
+            <li>
+              Repeat untill ray is back at the start (untill the ray is close to
+              the starting point)
+            </li>
+          </ol>
         </div>
       </div>
       <div class="pageSection fullscreen">
@@ -56,7 +87,7 @@
             </div>
             <div class="smallCard">
               <div class="head">
-                <h3>render gif with varrying angle</h3>
+                <h3>render gif with varying angle</h3>
               </div>
               <div class="body">
                 angle from:
@@ -66,6 +97,7 @@
                   min="0"
                   max="6.28"
                   step="0.1"
+                  value="0.3"
                 /><br />
                 angle to:
                 <input
@@ -74,6 +106,15 @@
                   min="0"
                   max="6.28"
                   step="0.1"
+                  value="1.5"
+                /><br />
+                angle step:
+                <input
+                  type="range"
+                  id="rotateAngleStep"
+                  min="0.01"
+                  max="1"
+                  step="0.01"
                 /><br />
                 resolution:
                 <input
@@ -81,14 +122,14 @@
                   id="rotateResolution"
                   min="1"
                   max="100"
-                  value="7"
+                  value="10"
                 /><br />
                 <button id="rotateDraw">draw</button>
               </div>
             </div>
             <div class="smallCard">
               <div class="head">
-                <h3>render gif with varrying resolution</h3>
+                <h3>render gif with varying resolution</h3>
               </div>
               <div class="body">
                 angle:
@@ -105,7 +146,7 @@
                   id="resFrom"
                   min="1"
                   max="100"
-                  value="7"
+                  value="5"
                 /><br />
                 resolution to:
                 <input
@@ -113,7 +154,16 @@
                   id="resTo"
                   min="1"
                   max="100"
-                  value="7"
+                  value="15"
+                /><br />
+                resolution step:
+                <input
+                  type="range"
+                  id="resStep"
+                  min="1"
+                  max="20"
+                  step="1"
+                  value="1"
                 /><br />
                 <button id="resDraw">draw</button>
               </div>

@@ -3,6 +3,20 @@ body {
   font-family: "Rubik", sans-serif;
 }
 
+h1 {
+  width: 100%;
+  text-align: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+h2 {
+  width: 100%;
+  text-align: center;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
 body {
   display: flex;
   flex-direction: row;
@@ -30,6 +44,8 @@ body {
   margin: 100px auto;
   width: calc(100% - 200px);
   border-radius: 3px;
+  padding: 20px 100px;
+  box-sizing: border-box;
 }
 
 .white {
@@ -44,13 +60,11 @@ body {
 .noMargin {
   margin: 0;
   width: 100%;
+  padding: 0;
 }
 
 .pageSection {
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   padding: 10px;
   box-sizing: border-box;
 }
@@ -83,6 +97,24 @@ body {
   color: white;
 }
 
+.smallCard {
+  border: dashed 1px rgb(51, 54, 57);
+  padding: 5px;
+  border-radius: 8px;
+}
+
+.smallCard:not(:first-child) {
+  margin-top: 5px;
+}
+
+.smallCard button {
+  width: 100%;
+  background: #2ecc71;
+  border: none;
+  border-radius: 3px;
+  margin-top: 20px;
+}
+
 /* download bar */
 #downloadProgressParent {
   /* width: 100%; */
@@ -110,8 +142,9 @@ body {
 }
 
 #downloadButton img {
-  width: 30px;
-  height: 30px;
+  width: 20px;
+  height: 20px;
+  padding: 5px;
   flex: 1;
   flex-grow: 0;
 }
@@ -130,3 +163,27 @@ body {
   background: #2ecc71;
 }
 /* canvas progress bar */
+
+.inputNumber {
+  position: fixed;
+  background: rgb(51, 54, 57);
+  z-index: 100;
+  border-radius: 3px;
+  color: white;
+}
+
+.relativeParent {
+  padding: 10px;
+  position: relative;
+  font-size: 0.5em;
+}
+
+.indicator {
+  position: absolute;
+  background: rgb(51, 54, 57);
+  width: 10px;
+  height: 10px;
+  bottom: -5px;
+  left: 5px;
+  transform: rotate(45deg);
+}

@@ -372,7 +372,6 @@ const withFillStyle = (f, color, ...args) => {
 maze1 = new maze(10);
 let outputGif = true;
 lastTime = 0;
-
 gif = null;
 
 // drawPixels(maze1, 2, 200, 2);
@@ -380,28 +379,32 @@ gif = null;
 animationRunning = false;
 animationShouldStop = false;
 
-function drawSlowly(maze, angle, maxSteps = 100, start, end, step) {
+async function drawSlowly(maze, angle, maxSteps = 100, start, end, step) {
   if (!gif) {
     gif = new GIF({
       workers: 2,
       quality: 10,
-      delay: 2
+      delay: 0
     });
   }
   animationRunning = true;
+  console.log({ maze, angle, maxSteps, start, end, step });
   if (start >= end && !animationShouldStop) {
-    drawPixels(maze, angle, maxSteps, start, 0, false);
+    //drawPixels(maze, angle, maxSteps, start, 0, false);
+    await drawPixelsBetter({ maze, angle: angle, maxSteps, step: start });
     if (outputGif) {
-      gif.addFrame(ctx.getImageData(0, 0, canvas.width, canvas.height));
+      gif.addFrame(ctx.getImageData(0, 0, canvas.width, canvas.height), {
+        delay: 10
+      });
     }
     console.log(`${start}/${end}`);
-    // drawProgress(start / end);
-    setIterationsLeft((end - start) / step);
+    setIterationsLeft((start - end) / step);
 
     requestAnimationFrame(() =>
       drawSlowly(maze, angle, maxSteps, start - step, end, step)
     );
   } else {
+    console.log(`ended`);
     animationRunning = false;
     showProgressBar(true);
     gif.on("finished", function(blob) {
@@ -424,7 +427,7 @@ async function rotate(maze, maxSteps, step, startAngle, endAngle, angleStep) {
     gif = new GIF({
       workers: 2,
       quality: 10,
-      delay: 2
+      delay: 0
     });
   }
   animationRunning = true;
@@ -432,7 +435,9 @@ async function rotate(maze, maxSteps, step, startAngle, endAngle, angleStep) {
     await drawPixelsBetter({ maze, angle: startAngle, maxSteps, step });
     console.log(`angle:`, startAngle);
     if (outputGif) {
-      gif.addFrame(ctx.getImageData(0, 0, canvas.width, canvas.height));
+      gif.addFrame(ctx.getImageData(0, 0, canvas.width, canvas.height), {
+        delay: 10
+      });
     }
     // drawProgress(startAngle / endAngle);
     setIterationsLeft((endAngle - startAngle) / angleStep);
@@ -456,6 +461,61 @@ async function rotate(maze, maxSteps, step, startAngle, endAngle, angleStep) {
 
     gif.render();
   }
+}
+
+async function changeMaxSteps({
+  maze,
+  step,
+  angle,
+  startMaxSteps,
+  endMaxSteps,
+  maxStepsStep
+}) {
+  if (!gif) {
+    gif = new GIF({
+      workers: 2,
+      quality: 10,
+      delay: 0
+    });
+  }
+
+  if (startMaxSteps <= endMaxSteps && !animationShouldStop) {
+    await drawPixelsBetter({ maze, angle, maxSteps: startMaxSteps, step });
+    if (outputGif) {
+      gif.addFrame(ctx.getImageData(0, 0, canvas.width, canvas.height), {
+        delay: 10
+      });
+    }
+    setIterationsLeft((endMaxSteps - startMaxSteps) / maxStepsStep);
+    requestAnimationFrame(() =>
+      changeMaxSteps({
+        maze,
+        step,
+        angle,
+        startMaxSteps: startMaxSteps + maxStepsStep,
+        endMaxSteps,
+        maxStepsStep
+      })
+    );
+  } else {
+    animationRunning = false;
+    showProgressBar(true);
+    gif.on("finished", function(blob) {
+      const url = URL.createObjectURL(blob);
+      console.log(`url:`, url);
+      showDownloadButton(true, url);
+      gif = null;
+    });
+    gif.on("progress", function(percentage) {
+      setProgressBarProgress(percentage);
+    });
+
+    gif.render();
+  }
+}
+
+async function zoomIn({ maze, maxSteps, step, angle }) {
+  //TODO: add zoomIn
 }
 
 function drawPixels(
@@ -495,6 +555,7 @@ function drawPixels(
 }
 
 const drawPixelsBetter = ({ maze, angle, maxSteps, step, progress }) => {
+  console.log({ maze, angle, maxSteps, step, progress });
   return new Promise(res => {
     animationIteratorPromise(0, canvas.width, step, i => {
       console.log(i, canvas.width);
@@ -539,3 +600,12 @@ const animationIteratorPromise = (from, to, step, iteratorFunction) =>
   await animationIteratorPromise(0, 10, 1, console.log);
   console.log(`DONE`);
 })();
+
+// changeMaxSteps({
+//   maze: maze1,
+//   angle: 2,
+//   step: 2,
+//   startMaxSteps: 0,
+//   endMaxSteps: 400,
+//   maxStepsStep: 50
+// });
