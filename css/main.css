@@ -1,5 +1,6 @@
 body {
   margin: 0;
+  font-family: "Rubik", sans-serif;
 }
 
 body {
@@ -13,7 +14,7 @@ body {
 
 #mainCanvas {
   position: relative;
-  margin: 20px 10px 0 0;
+  /* margin: 20px 10px 0 0; */
   border-radius: 3px;
   background: white;
   overflow: hidden;
@@ -21,20 +22,28 @@ body {
     0 3px 5px -1px rgba(0, 0, 0, 0.2);
 }
 
+.canvasWrapper {
+  margin: 20px;
+}
+
 .page {
-  /* background: white; */
-  margin: 100px 0 100px 0;
-  width: 100vw;
+  margin: 100px auto;
+  width: calc(100% - 200px);
   border-radius: 3px;
 }
 
-@media only screen and (max-width: 900px) {
-  .page {
-    width: 100vw;
-    margin: 0;
-    border-radius: 0px;
-    height: 100vh;
-  }
+.white {
+  background: white;
+}
+
+.noBottom {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.noMargin {
+  margin: 0;
+  width: 100%;
 }
 
 .pageSection {
@@ -43,6 +52,16 @@ body {
   flex-direction: column;
   align-items: center;
   padding: 10px;
+  box-sizing: border-box;
+}
+
+.fullscreen {
+  min-height: 100vh;
+  border-top: 1px dashed #2ecc71;
+  border-bottom: 1px dashed #2ecc71;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .maze-demo {
@@ -56,7 +75,7 @@ body {
 .controls {
   height: 100%;
   padding: 10px;
-  margin: 20px 10px 0 0;
+  margin: 20px;
   border-radius: 3px;
   box-shadow: 0 6px 10px 0 rgba(0, 0, 0, 0.14), 0 1px 18px 0 rgba(0, 0, 0, 0.12),
     0 3px 5px -1px rgba(0, 0, 0, 0.2);
@@ -107,6 +126,7 @@ body {
 #canvasProgressInner {
   width: 0%;
   height: 100%;
+  border-radius: 3px;
   background: #2ecc71;
 }
 /* canvas progress bar */

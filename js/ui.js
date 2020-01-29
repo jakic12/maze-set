@@ -12,6 +12,11 @@ const setProgressBarProgress = progress => {
   progressBar.style.width = progress * 100 + `%`;
 };
 
+const drawProgress = percentage => {
+  document.getElementById("canvasProgressInner").style.width = `${percentage *
+    100}%`;
+};
+
 const showDownloadButton = (show, url) => {
   downloadButton.style.display = show ? `` : `none`;
   downloadButton.style.transform = show ? `rotate(0deg)` : `rotate(180deg)`;
@@ -19,8 +24,15 @@ const showDownloadButton = (show, url) => {
 };
 
 const estimatedTimeOut = document.getElementById("estimatedTime");
-const setEstimatedTime = time => {
-  estimatedTimeOut.innerText = time;
+const setAllIterations = all => {
+  estimatedTimeOut.all = parseInt(all);
+};
+const setIterationsLeft = left => {
+  estimatedTimeOut.innerText = `${estimatedTimeOut.all - parseInt(left)}/${
+    estimatedTimeOut.all
+  }`;
+
+  drawProgress((estimatedTimeOut.all - parseInt(left)) / estimatedTimeOut.all);
 };
 
 // CONTROLLS
@@ -39,6 +51,8 @@ const normalAngle = document.getElementById("normalAngle");
 const normalResolution = document.getElementById("normalResolution");
 const normalDraw = document.getElementById("normalDraw");
 normalDraw.addEventListener("click", () => {
+  showProgressBar(false);
+  drawProgress(0);
   stopAndWait(() => {
     drawPixels(
       maze1,
@@ -54,6 +68,9 @@ const rotateAngleTo = document.getElementById("rotateAngleTo");
 const rotateResolution = document.getElementById("rotateResolution");
 const rotateDraw = document.getElementById("rotateDraw");
 rotateDraw.addEventListener("click", () => {
+  setAllIterations((+rotateAngleTo.value - +rotateAngleFrom.value) / 0.1);
+  showProgressBar(false);
+  drawProgress(0);
   if (rotateAngleFrom.value < rotateAngleTo.value)
     stopAndWait(() => {
       rotate(

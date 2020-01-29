@@ -369,13 +369,9 @@ const withFillStyle = (f, color, ...args) => {
   ctx.fillStyle = prevStroke;
 };
 
-const drawProgress = percentage => {
-  document.getElementById("canvasProgressInner").style.width = `${percentage *
-    100}%`;
-};
-
 maze1 = new maze(10);
 let outputGif = true;
+lastTime = 0;
 
 gif = null;
 
@@ -399,7 +395,9 @@ function drawSlowly(maze, angle, maxSteps = 100, start, end, step) {
       gif.addFrame(ctx.getImageData(0, 0, canvas.width, canvas.height));
     }
     console.log(`${start}/${end}`);
-    drawProgress(start / end);
+    // drawProgress(start / end);
+    setIterationsLeft((end - start) / step);
+
     requestAnimationFrame(() =>
       drawSlowly(maze, angle, maxSteps, start - step, end, step)
     );
@@ -436,7 +434,9 @@ async function rotate(maze, maxSteps, step, startAngle, endAngle, angleStep) {
     if (outputGif) {
       gif.addFrame(ctx.getImageData(0, 0, canvas.width, canvas.height));
     }
-    drawProgress(startAngle / endAngle);
+    // drawProgress(startAngle / endAngle);
+    setIterationsLeft((endAngle - startAngle) / angleStep);
+
     requestAnimationFrame(() =>
       rotate(maze, maxSteps, step, startAngle + angleStep, endAngle, angleStep)
     );
@@ -484,7 +484,7 @@ function drawPixels(
           mazeColor.g}, ${(bounces / maxSteps) * mazeColor.b})`
       );
     }
-    if (progress) drawProgress(i / canvas.width);
+    // if (progress) drawProgress(i / canvas.width);
     requestAnimationFrame(() =>
       drawPixels(maze, angle, maxSteps, step, i + step)
     );
@@ -512,7 +512,7 @@ const drawPixelsBetter = ({ maze, angle, maxSteps, step, progress }) => {
             mazeColor.g}, ${(bounces / maxSteps) * mazeColor.b})`
         );
       }
-      if (progress) drawProgress(i / canvas.width);
+      // if (progress) drawProgress(i / canvas.width);
     }).then(() => {
       res();
     });
@@ -539,7 +539,3 @@ const animationIteratorPromise = (from, to, step, iteratorFunction) =>
   await animationIteratorPromise(0, 10, 1, console.log);
   console.log(`DONE`);
 })();
-
-// angle:2.1
-// res: 25
-// time: 25.8

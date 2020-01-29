@@ -4,10 +4,20 @@
     <meta charset="UTF-8" />
     <title>Document</title>
     <link rel="stylesheet" href="css/main.css" />
+    <link
+      href="https://fonts.googleapis.com/css?family=Rubik&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
-    <div class="page">
-      <div class="pageSection">
+    <div class="page noMargin">
+      <div class="page white">
+        <div class="pageSection">
+          <h1>test</h1>
+          <p>test</p>
+        </div>
+      </div>
+      <div class="pageSection fullscreen">
         <div class="maze-demo">
           <div class="canvasWrapper">
             <canvas id="mainCanvas"></canvas>
@@ -17,11 +27,11 @@
           </div>
           <div class="controls">
             <div class="timeEstimation">
-              <p>est. time: <span id="estimatedTime"></span></p>
+              <p>completed: <span id="estimatedTime"></span></p>
             </div>
             <div class="smallCard">
               <div class="head">
-                <h5>draw with angle</h5>
+                <h3>draw with angle</h3>
               </div>
               <div class="body">
                 angle:
@@ -46,7 +56,7 @@
             </div>
             <div class="smallCard">
               <div class="head">
-                <h5>render gif with varrying angle</h5>
+                <h3>render gif with varrying angle</h3>
               </div>
               <div class="body">
                 angle from:
@@ -78,7 +88,7 @@
             </div>
             <div class="smallCard">
               <div class="head">
-                <h5>render gif with varrying resolution</h5>
+                <h3>render gif with varrying resolution</h3>
               </div>
               <div class="body">
                 angle:
@@ -111,10 +121,6 @@
             <div class=""></div>
           </div>
         </div>
-      </div>
-      <div class="pageSection">
-        <h1>test</h1>
-        <p>test</p>
       </div>
     </div>
     <div id="downloadContainter" style="display:none">
