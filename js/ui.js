@@ -158,13 +158,15 @@ zoomDraw.addEventListener("click", () => {
   showProgressBar(false);
   drawProgress(0);
   if (+zoomFrom.value <= +zoomTo.value)
-    zoomIn({
-      maze: maze1,
-      angle: +zoomAngle.value,
-      step: Math.round(100 / +zoomRes.value),
-      maxSteps: 400,
-      zoomStart: +zoomFrom.value,
-      zoomEnd: +zoomTo.value,
-      zoomStep: +zoomStep.value
+    stopAndWait(() => {
+      zoomIn({
+        maze: maze1,
+        angle: +zoomAngle.value,
+        step: Math.round(100 / +zoomRes.value),
+        maxSteps: 400,
+        zoomStart: +zoomFrom.value,
+        zoomEnd: +zoomTo.value,
+        zoomStep: +zoomStep.value
+      });
     });
 });

@@ -531,7 +531,7 @@ async function zoomIn({
       delay: 0
     });
   }
-
+  animationRunning = true;
   if (zoomStart <= zoomEnd && !animationShouldStop) {
     await drawPixelsBetter({ maze, angle, maxSteps, step, zoom: zoomStart });
     if (outputGif) {
