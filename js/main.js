@@ -368,8 +368,9 @@ const withFillStyle = (f, color, ...args) => {
   f(...args);
   ctx.fillStyle = prevStroke;
 };
-
-maze1 = new maze(10);
+let mazeSize = prompt(`Enter maze size(number of cells)`) | 10;
+console.log(mazeSize);
+maze1 = new maze(mazeSize);
 let outputGif = true;
 lastTime = 0;
 gif = null;
