@@ -145,3 +145,26 @@ resDraw.addEventListener("click", () => {
       drawSlowly(maze1, +resAngle.value, 200, from, to, +resStep.value);
     });
 });
+
+const zoomAngle = document.getElementById(`zoomAngle`);
+const zoomRes = document.getElementById(`zoomRes`);
+const zoomFrom = document.getElementById(`zoomFrom`);
+const zoomTo = document.getElementById(`zoomTo`);
+const zoomStep = document.getElementById(`zoomStep`);
+const zoomDraw = document.getElementById(`zoomDraw`);
+
+zoomDraw.addEventListener("click", () => {
+  setAllIterations((zoomTo.value - zoomFrom.value) / +zoomStep.value);
+  showProgressBar(false);
+  drawProgress(0);
+  if (+zoomFrom.value <= +zoomTo.value)
+    zoomIn({
+      maze: maze1,
+      angle: +zoomAngle.value,
+      step: Math.round(100 / +zoomRes.value),
+      maxSteps: 400,
+      zoomStart: +zoomFrom.value,
+      zoomEnd: +zoomTo.value,
+      zoomStep: +zoomStep.value
+    });
+});
