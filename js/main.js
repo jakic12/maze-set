@@ -622,6 +622,8 @@ const drawPixelsBetter = ({ maze, angle, maxSteps, step, progress, zoom }) => {
 
       startY = canvas.height / 2 - canvas.height / zoom / 2;
       endY = canvas.height / 2 + canvas.height / zoom / 2;
+    } else {
+      zoom = 1;
     }
 
     animationIteratorPromise(startX, endX, scaledStep, i => {
