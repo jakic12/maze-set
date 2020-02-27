@@ -3,6 +3,10 @@ const ctx = canvas.getContext("2d");
 
 const mazeColor = { r: 46, g: 204, b: 112 };
 
+const DIR = {
+  TOP:1, RIGHT:2, BOTTOM:3, LEFT:4
+}
+
 /**
  * Shuffles array in place. ES6 version
  * @param {Array} a items An array containing the items.
@@ -87,25 +91,25 @@ class cell {
     const b = {};
 
     switch (position) {
-      case 1:
+      case DIR.TOP:
         a.x = this.pos.x;
         a.y = this.pos.y;
         b.x = a.x + this.diagonal.x;
         b.y = a.y;
         break;
-      case 2:
+      case DIR.RIGHT:
         a.x = this.pos.x + this.diagonal.x;
         a.y = this.pos.y;
         b.x = a.x;
         b.y = a.y + this.diagonal.y;
         break;
-      case 3:
+      case DIR.BOTTOM:
         a.x = this.pos.x;
         a.y = this.pos.y + this.diagonal.y;
         b.x = a.x + this.diagonal.x;
         b.y = a.y;
         break;
-      case 4:
+      case DIR.LEFT:
         a.x = this.pos.x;
         a.y = this.pos.y;
         b.x = a.x;
@@ -175,83 +179,18 @@ class maze {
     }
 
     this.generateWalls({ x: 0, y: 0 });
+    this.cellCount = cellCount;
   }
 
-  bounceFromPoint(point, angle, maxSteps = 100, drawLines = false) {
-    if (drawLines) drawPoint(point);
-    angle = angle % (2 * Math.PI);
-    const rays = [
-      {
-        startPoint: point,
-        line: new Line({
-          a: point,
-          k: Math.tan(angle)
-        }),
-        positive:
-          (angle > -Math.PI / 2 && angle < Math.PI / 2) ||
-          angle > (Math.PI * 3) / 2
-      }
-    ];
-    let i;
-    for (i = 0; i < maxSteps; i++) {
-      const lastRay = rays[rays.length - 1];
-      if (drawLines) {
-        lastRay.line.drawLine();
-        drawPoint(lastRay.startPoint);
-      }
-      const cellIntersections = []
-        .concat(
-          ...this.cells.map(r =>
-            [].concat(...r.map(c => c.wallIntersections(lastRay.line)))
-          )
-        )
-        .filter(p => lastRay.positive ^ (p.x < lastRay.startPoint.x))
-        .filter(p => distanceBetweenPoints(lastRay.startPoint, p) > 0.001);
-
-      if (cellIntersections.length > 0) {
-        const {
-          p: closestPoint,
-          d: distanceToClosestPoint
-        } = cellIntersections.reduce(
-          (prev, p) => {
-            const d = distanceBetweenPoints(lastRay.startPoint, p);
-            return d < prev.d ? { p, d } : prev;
-          },
-          {
-            p: cellIntersections[0],
-            d: distanceBetweenPoints(lastRay.startPoint, cellIntersections[0])
-          }
-        );
-
-        const newRayPositive = closestPoint.horizontal
-          ? lastRay.positive
-          : !lastRay.positive;
-
-        rays.push({
-          startPoint: closestPoint,
-          line: new Line({
-            a: closestPoint,
-            k: -lastRay.line.k
-          }),
-          positive: newRayPositive
-        });
-
-        if (i > 0) {
-          const closestPointToStart = new Line({
-            k: -1 / lastRay.line.k,
-            a: point
-          }).intersection(lastRay.line);
-          if (
-            distanceBetweenPoints(closestPointToStart, point) <
-              distanceToClosestPoint &&
-            lastRay.line.distanceToPoint(point) < 1
-          ) {
-            break;
-          }
-        }
-      }
-    }
-    return rays;
+  drawRect(cellX, cellY, color){
+    const cellSizeX = (canvas.width/this.cellCount);
+    const cellSizeY = (canvas.height/this.cellCount);
+    
+    ctx.beginPath();
+    withFillStyle(() => {
+      ctx.fillRect(cellX *  cellSizeX, cellY * cellSizeY, cellSizeX, cellSizeY)
+    }, color)
+    ctx.stroke();
   }
 
   generateWalls(startPoint) {
@@ -368,291 +307,6 @@ const withFillStyle = (f, color, ...args) => {
   f(...args);
   ctx.fillStyle = prevStroke;
 };
-let mazeSize = prompt(`Enter maze size(number of cells)`) | 10;
-console.log(mazeSize);
-maze1 = new maze(mazeSize);
-let outputGif = true;
-lastTime = 0;
-gif = null;
-
-// drawPixels(maze1, 2, 200, 2);
-// drawSlowly(maze1, 1, 200, 100, 1, 1);
-animationRunning = false;
-animationShouldStop = false;
-
-async function drawSlowly(maze, angle, maxSteps = 100, start, end, step) {
-  if (!gif) {
-    gif = new GIF({
-      workers: 2,
-      quality: 10,
-      delay: 0
-    });
-  }
-  animationRunning = true;
-  console.log({ maze, angle, maxSteps, start, end, step });
-  if (start >= end && !animationShouldStop) {
-    //drawPixels(maze, angle, maxSteps, start, 0, false);
-    await drawPixelsBetter({ maze, angle: angle, maxSteps, step: start });
-    if (outputGif) {
-      gif.addFrame(ctx.getImageData(0, 0, canvas.width, canvas.height), {
-        delay: 10
-      });
-    }
-    console.log(`${start}/${end}`);
-    setIterationsLeft((start - end) / step);
-
-    requestAnimationFrame(() =>
-      drawSlowly(maze, angle, maxSteps, start - step, end, step)
-    );
-  } else {
-    console.log(`ended`);
-    animationRunning = false;
-    showProgressBar(true);
-    gif.on("finished", function(blob) {
-      const url = URL.createObjectURL(blob);
-      console.log(`url:`, url);
-      // downloadUrl(url);
-      showDownloadButton(true, url);
-      gif = null;
-    });
-    gif.on("progress", function(percentage) {
-      setProgressBarProgress(percentage);
-    });
-
-    gif.render();
-  }
-}
-
-async function rotate(maze, maxSteps, step, startAngle, endAngle, angleStep) {
-  if (!gif) {
-    gif = new GIF({
-      workers: 2,
-      quality: 10,
-      delay: 0
-    });
-  }
-  animationRunning = true;
-  if (startAngle <= endAngle && !animationShouldStop) {
-    await drawPixelsBetter({ maze, angle: startAngle, maxSteps, step });
-    console.log(`angle:`, startAngle);
-    if (outputGif) {
-      gif.addFrame(ctx.getImageData(0, 0, canvas.width, canvas.height), {
-        delay: 10
-      });
-    }
-    // drawProgress(startAngle / endAngle);
-    setIterationsLeft((endAngle - startAngle) / angleStep);
-
-    requestAnimationFrame(() =>
-      rotate(maze, maxSteps, step, startAngle + angleStep, endAngle, angleStep)
-    );
-  } else if (outputGif) {
-    animationRunning = false;
-    showProgressBar(true);
-    gif.on("finished", function(blob) {
-      const url = URL.createObjectURL(blob);
-      console.log(`url:`, url);
-      // downloadUrl(url);
-      showDownloadButton(true, url);
-      gif = null;
-    });
-    gif.on("progress", function(percentage) {
-      setProgressBarProgress(percentage);
-    });
-
-    gif.render();
-  }
-}
-
-async function changeMaxSteps({
-  maze,
-  step,
-  angle,
-  startMaxSteps,
-  endMaxSteps,
-  maxStepsStep
-}) {
-  if (!gif) {
-    gif = new GIF({
-      workers: 2,
-      quality: 10,
-      delay: 0
-    });
-  }
-
-  if (startMaxSteps <= endMaxSteps && !animationShouldStop) {
-    await drawPixelsBetter({ maze, angle, maxSteps: startMaxSteps, step });
-    if (outputGif) {
-      gif.addFrame(ctx.getImageData(0, 0, canvas.width, canvas.height), {
-        delay: 10
-      });
-    }
-    setIterationsLeft((endMaxSteps - startMaxSteps) / maxStepsStep);
-    requestAnimationFrame(() =>
-      changeMaxSteps({
-        maze,
-        step,
-        angle,
-        startMaxSteps: startMaxSteps + maxStepsStep,
-        endMaxSteps,
-        maxStepsStep
-      })
-    );
-  } else {
-    animationRunning = false;
-    showProgressBar(true);
-    gif.on("finished", function(blob) {
-      const url = URL.createObjectURL(blob);
-      console.log(`url:`, url);
-      showDownloadButton(true, url);
-      gif = null;
-    });
-    gif.on("progress", function(percentage) {
-      setProgressBarProgress(percentage);
-    });
-
-    gif.render();
-  }
-}
-
-async function zoomIn({
-  maze,
-  maxSteps,
-  step,
-  angle,
-  zoomStart,
-  zoomEnd,
-  zoomStep
-}) {
-  if (!gif) {
-    gif = new GIF({
-      workers: 2,
-      quality: 10,
-      delay: 0
-    });
-  }
-  animationRunning = true;
-  if (zoomStart <= zoomEnd && !animationShouldStop) {
-    await drawPixelsBetter({ maze, angle, maxSteps, step, zoom: zoomStart });
-    if (outputGif) {
-      gif.addFrame(ctx.getImageData(0, 0, canvas.width, canvas.height), {
-        delay: 10
-      });
-    }
-    setIterationsLeft((zoomEnd - zoomStart) / zoomStep);
-    requestAnimationFrame(() =>
-      zoomIn({
-        maze,
-        maxSteps,
-        step,
-        angle,
-        zoomStart: zoomStart + zoomStep,
-        zoomEnd,
-        zoomStep
-      })
-    );
-  } else {
-    animationRunning = false;
-    showProgressBar(true);
-    gif.on("finished", function(blob) {
-      const url = URL.createObjectURL(blob);
-      console.log(`url:`, url);
-      showDownloadButton(true, url);
-      gif = null;
-    });
-    gif.on("progress", function(percentage) {
-      setProgressBarProgress(percentage);
-    });
-
-    gif.render();
-  }
-}
-
-function drawPixels(
-  maze,
-  angle,
-  maxSteps = 100,
-  step = 100,
-  i = 0,
-  progress = true
-) {
-  if (i == 0) clearCanvas();
-  animationRunning = true;
-  if (i < canvas.width && !animationShouldStop) {
-    console.log(i, canvas.width);
-    for (let j = 0; j < canvas.height; j += step) {
-      let bounces =
-        maze.bounceFromPoint(
-          { x: i + step / 2, y: j + step / 2 },
-          angle,
-          maxSteps
-        ).length - 1;
-      withFillStyle(
-        () => ctx.fillRect(i, j, step, step),
-        // `hsl(${(bounces / maxSteps) * 60 + 240}, 100%, 50%)`
-        `rgb(${(bounces / maxSteps) * mazeColor.r}, ${(bounces / maxSteps) *
-          mazeColor.g}, ${(bounces / maxSteps) * mazeColor.b})`
-      );
-    }
-    // if (progress) drawProgress(i / canvas.width);
-    requestAnimationFrame(() =>
-      drawPixels(maze, angle, maxSteps, step, i + step)
-    );
-  } else {
-    animationRunning = false;
-  }
-  maze.drawMaze();
-}
-
-const drawPixelsBetter = ({ maze, angle, maxSteps, step, progress, zoom }) => {
-  console.log({ maze, angle, maxSteps, step, progress });
-  return new Promise(res => {
-    let startX = 0;
-    let endX = canvas.width;
-
-    let startY = 0;
-    let endY = canvas.height;
-
-    let scaledStep = step;
-
-    if (zoom) {
-      startX = canvas.width / 2 - canvas.width / zoom / 2;
-      endX = canvas.width / 2 + canvas.width / zoom / 2;
-      scaledStep = step / zoom;
-
-      startY = canvas.height / 2 - canvas.height / zoom / 2;
-      endY = canvas.height / 2 + canvas.height / zoom / 2;
-    } else {
-      zoom = 1;
-    }
-
-    animationIteratorPromise(startX, endX, scaledStep, i => {
-      console.log(i, canvas.width);
-      for (let j = startY; j < endY; j += scaledStep) {
-        let bounces =
-          maze.bounceFromPoint(
-            { x: i + scaledStep / 2, y: j + scaledStep / 2 },
-            angle,
-            maxSteps
-          ).length - 1;
-
-        const rowI = canvas.width / 2 + (i - canvas.width / 2) * zoom;
-        const rowJ = canvas.height / 2 + (j - canvas.height / 2) * zoom;
-
-        withFillStyle(
-          () => ctx.fillRect(rowI, rowJ, step, step),
-          // `hsl(${(bounces / maxSteps) * 60 + 240}, 100%, 50%)`
-          `rgb(${(bounces / maxSteps) * mazeColor.r}, ${(bounces / maxSteps) *
-            mazeColor.g}, ${(bounces / maxSteps) * mazeColor.b})`
-        );
-      }
-      // if (progress) drawProgress(i / canvas.width);
-    }).then(() => {
-      res();
-    });
-  });
-};
-
 const animationIterator = (from, to, step, iteratorFunction, callback) => {
   if (from < to) {
     iteratorFunction(from);
@@ -669,7 +323,118 @@ const animationIteratorPromise = (from, to, step, iteratorFunction) =>
     animationIterator(from, to, step, iteratorFunction, res);
   });
 
-(async () => {
-  await animationIteratorPromise(0, 10, 1, console.log);
-  console.log(`DONE`);
-})();
+
+class Player{
+  constructor(x,y, direction, maze, playerColor = "blue", trailColor = "green"){
+    this.x = x;
+    this.y = y;
+    this.direction = direction;
+    this.playerHistory = [];
+    this.maze = maze;
+
+    this.playerColor = playerColor;
+    this.trailColor = trailColor;
+  }
+
+  drawPlayer(){
+    this.playerHistory.map(point => {
+      this.maze.drawRect(point.x, point.y, this.trailColor);
+    })
+    this.maze.drawRect(this.x, this.y, this.playerColor);
+    this.maze.drawMaze(false)
+  }
+
+  /**
+   * @returns if the game should end
+   */
+  movePlayer(){ 
+    this.playerHistory.push({x:this.x, y:this.y});
+    if(this.maze[this.y][this.x].walls[this.direction - 1]){
+      return true;
+    }else{
+      switch(this.direction){
+        case DIR.TOP:
+          this.y -= 1;
+          break;
+        case DIR.LEFT:
+          this.x -= 1;
+          break;
+        case DIR.RIGHT:
+          this.x += 1;
+          break;
+        case DIR.BOTTOM:
+          this.y += 1;
+          break;
+      }
+    }
+  }
+}
+
+class Game{
+  /**
+   * 
+   * @param {Object} controls {key: direction}
+   */
+  constructor(maze, frameDelay = 500, controls = {
+    ArrowUp: [DIR.TOP],
+    ArrowDown: [DIR.BOTTOM],
+    ArrowLeft: [DIR.LEFT],
+    ArrowRight: [DIR.RIGHT],
+  }){
+    this.controls = controls;
+    this.controlStates = {};
+    this.frameDelay = frameDelay;
+    this.maze = maze;
+
+    this.gameLoop = this.gameLoop.bind(this)
+  }
+
+  start(){
+    this.player = new Player(0,0, this.maze.cells[0][0].walls.reduce((prev, value, index) => {
+      console.log(prev, value)
+      if(prev == -1 ){
+        if(value == false)
+        return index+1
+        else
+        return -1;
+      }else{
+        return prev;
+        }
+    }, -1), this.maze);
+
+      addEventListener("keydown", evt => {
+        if(this.controls[evt.key])
+          this.controlStates[this.controls[evt.key]] = true
+        console.log(this.controlStates)
+      })
+      
+      addEventListener("keyup", evt => {
+        if(this.controls[evt.key])
+          this.controlStates[this.controls[evt.key]] = false
+        console.log(this.controlStates)
+      })
+      
+      this.player.drawPlayer()
+      setInterval(this.gameLoop, this.frameDelay)
+  }
+
+  gameLoop(){
+    let moved = false;
+    Object.keys(this.controlStates).map(direction => {
+      if(!moved && this.controlStates[direction]){
+        this.player.direction = direction;
+      }
+    })
+    this.player.movePlayer();
+    moved = true
+    this.player.drawPlayer()
+  }
+}
+
+  let mazeSize = 10;
+maze1 = new maze(mazeSize);
+maze1.drawMaze(true);
+
+game1 = new Game(maze1);
+game1.start();
+
