@@ -4,8 +4,11 @@ const ctx = canvas.getContext("2d");
 const mazeColor = { r: 46, g: 204, b: 112 };
 
 const DIR = {
-  TOP:1, RIGHT:2, BOTTOM:3, LEFT:4
-}
+  TOP: 1,
+  RIGHT: 2,
+  BOTTOM: 3,
+  LEFT: 4
+};
 
 /**
  * Shuffles array in place. ES6 version
@@ -182,15 +185,22 @@ class maze {
     this.cellCount = cellCount;
   }
 
-  drawRect(cellX, cellY, color){
-    const cellSizeX = (canvas.width/this.cellCount);
-    const cellSizeY = (canvas.height/this.cellCount);
-    
+  drawRect(cellX, cellY, color) {
+    const cellSizeX = canvas.width / this.cellCount;
+    const cellSizeY = canvas.height / this.cellCount;
+
     ctx.beginPath();
     withFillStyle(() => {
-      ctx.fillRect(cellX *  cellSizeX, cellY * cellSizeY, cellSizeX, cellSizeY)
-    }, color)
+      ctx.fillRect(cellX * cellSizeX, cellY * cellSizeY, cellSizeX, cellSizeY);
+    }, color);
     ctx.stroke();
+  }
+
+  cellToPixelCoordinates({ x, y }) {
+    const cellSizeX = canvas.width / this.cellCount;
+    const cellSizeY = canvas.height / this.cellCount;
+
+    return { x: x * cellSizeX, y: y * cellSizeY };
   }
 
   generateWalls(startPoint) {
@@ -323,9 +333,15 @@ const animationIteratorPromise = (from, to, step, iteratorFunction) =>
     animationIterator(from, to, step, iteratorFunction, res);
   });
 
-
-class Player{
-  constructor(x,y, direction, maze, playerColor = "blue", trailColor = "green"){
+class Player {
+  constructor(
+    x,
+    y,
+    direction,
+    maze,
+    playerColor = "blue",
+    trailColor = "green"
+  ) {
     this.x = x;
     this.y = y;
     this.direction = direction;
@@ -336,23 +352,23 @@ class Player{
     this.trailColor = trailColor;
   }
 
-  drawPlayer(){
+  drawPlayer() {
     this.playerHistory.map(point => {
       this.maze.drawRect(point.x, point.y, this.trailColor);
-    })
+    });
     this.maze.drawRect(this.x, this.y, this.playerColor);
-    this.maze.drawMaze(false)
+    this.maze.drawMaze(false);
   }
 
   /**
    * @returns if the game should end
    */
-  movePlayer(){ 
-    this.playerHistory.push({x:this.x, y:this.y});
-    if(this.maze[this.y][this.x].walls[this.direction - 1]){
+  movePlayer() {
+    this.playerHistory.push({ x: this.x, y: this.y });
+    if (this.maze.cells[this.y][this.x].walls[this.direction - 1]) {
       return true;
-    }else{
-      switch(this.direction){
+    } else {
+      switch (this.direction) {
         case DIR.TOP:
           this.y -= 1;
           break;
@@ -368,73 +384,286 @@ class Player{
       }
     }
   }
+
+  wallOnDirection(direction) {
+    return this.maze.cells[this.y][this.x].walls[direction - 1];
+  }
+
+  getPixelPosition() {
+    return this.maze.cellToPixelCoordinates({ x: this.x, y: this.y });
+  }
 }
 
-class Game{
+class Camera {
+  constructor(canvas, settings) {
+    this.moveSpeed = (settings && settings.moveSpeed) || 0.2;
+    this.rotationSpeed = (settings && settings.rotationSpeed) || 0.2;
+    this.canvas = canvas;
+
+    this.cameraLoop = this.cameraLoop.bind(this);
+  }
+
+  startCamera() {
+    this.stop = false;
+    this.canvas.style.transformOrigin = `50% 50%`;
+    this.cameraLoop();
+  }
+
   /**
-   * 
+   * internal function
+   */
+  cameraLoop() {
+    this.moveCameraInternal();
+    this.rotateCameraInternal();
+    this.updateTransform();
+    if (!this.stop) requestAnimationFrame(this.cameraLoop);
+  }
+
+  stopCamera() {
+    this.stop = true;
+  }
+
+  /**
+   * internal function
+   */
+  moveCameraInternal() {
+    if (this.targetX !== undefined) {
+      if (this.x === undefined) {
+        this.x = this.targetX;
+      } else {
+        this.x += (this.targetX - this.x) * this.moveSpeed;
+      }
+    }
+
+    if (this.targetY !== undefined) {
+      if (this.y === undefined) {
+        this.y = this.targetY;
+      } else {
+        this.y += (this.targetY - this.y) * this.moveSpeed;
+      }
+    }
+  }
+
+  /*
+   * internal function
+   */
+  rotateCameraInternal() {
+    if (this.targetAngle !== undefined) {
+      if (this.angle === undefined) {
+        this.angle = this.targetAngle;
+      } else {
+        this.angle += (this.targetAngle - this.angle) * this.rotationSpeed;
+      }
+    }
+  }
+
+  /*
+   * internal function
+   */
+  updateTransform() {
+    let transform = ``;
+    if (this.x !== undefined && this.y !== undefined) {
+      const transformed = this.getTransformedCoordinates(
+        {
+          x: this.x - this.canvas.width / 2,
+          y: this.y - this.canvas.height / 2
+        },
+        -this.angle || 0
+      );
+      this.canvas.style.left = `${-transformed.x - this.canvas.width / 2}px`;
+      this.canvas.style.top = `${-transformed.y - this.canvas.height / 2}px`;
+    } else {
+      this.canvas.style.left = `${this.canvas.width / 2}px`;
+      this.canvas.style.top = `${this.canvas.height / 2}px`;
+    }
+    if (this.angle !== undefined) {
+      transform = `rotate(${-this.angle}deg)`;
+    }
+    this.canvas.style.transform = transform;
+  }
+
+  /**
+   * gets the coordinates from a system with theta angle
+   */
+  getTransformedCoordinates(pos, theta) {
+    const degrees = (theta * Math.PI) / 180;
+    return {
+      x: pos.x * Math.cos(degrees) - pos.y * Math.sin(degrees),
+      y: pos.x * Math.sin(degrees) + pos.y * Math.cos(degrees)
+    };
+  }
+
+  setCameraTargetPosition(pos) {
+    this.targetX = pos.x;
+    this.targetY = pos.y;
+  }
+
+  setCameraTargetRotation(angle) {
+    this.targetAngle = angle;
+  }
+
+  setCameraDirection(direction) {
+    const prevDir = this.direction;
+    switch (direction) {
+      case DIR.TOP:
+        this.setCameraTargetRotation(0);
+        break;
+      case DIR.LEFT:
+        this.setCameraTargetRotation(270);
+        break;
+      case DIR.RIGHT:
+        this.setCameraTargetRotation(90);
+        break;
+      case DIR.BOTTOM:
+        this.setCameraTargetRotation(180);
+        break;
+    }
+  }
+}
+class Game {
+  /**
+   *
    * @param {Object} controls {key: direction}
    */
-  constructor(maze, frameDelay = 500, controls = {
-    ArrowUp: [DIR.TOP],
-    ArrowDown: [DIR.BOTTOM],
-    ArrowLeft: [DIR.LEFT],
-    ArrowRight: [DIR.RIGHT],
-  }){
+  constructor(
+    maze,
+    frameDelay = 500,
+    controls = {
+      ArrowUp: [DIR.TOP],
+      ArrowDown: [DIR.BOTTOM],
+      ArrowLeft: [DIR.LEFT],
+      ArrowRight: [DIR.RIGHT]
+    },
+    end = { x: maze.cellCount - 1, y: maze.cellCount - 1 },
+    colors = {
+      playerColor: "blue",
+      trailColor: "green",
+      endColor: "red"
+    },
+    cameraMode = true
+  ) {
     this.controls = controls;
     this.controlStates = {};
     this.frameDelay = frameDelay;
     this.maze = maze;
+    this.end = end;
+    this.colors = colors;
 
-    this.gameLoop = this.gameLoop.bind(this)
+    this.camera = new Camera(canvas);
+
+    this.gameLoop = this.gameLoop.bind(this);
   }
 
-  start(){
-    this.player = new Player(0,0, this.maze.cells[0][0].walls.reduce((prev, value, index) => {
-      console.log(prev, value)
-      if(prev == -1 ){
-        if(value == false)
-        return index+1
-        else
-        return -1;
-      }else{
-        return prev;
+  start() {
+    if (this.camera) {
+      this.camera.startCamera();
+    }
+    this.gameStop = false;
+    this.player = new Player(
+      0,
+      0,
+      this.maze.cells[0][0].walls.reduce((prev, value, index) => {
+        console.log(prev, value);
+        if (prev == -1) {
+          if (value == false) return index + 1;
+          else return -1;
+        } else {
+          return prev;
         }
-    }, -1), this.maze);
+      }, -1),
+      this.maze,
+      this.colors.playerColor,
+      this.colors.trailColor
+    );
 
-      addEventListener("keydown", evt => {
-        if(this.controls[evt.key])
-          this.controlStates[this.controls[evt.key]] = true
-        console.log(this.controlStates)
-      })
-      
-      addEventListener("keyup", evt => {
-        if(this.controls[evt.key])
-          this.controlStates[this.controls[evt.key]] = false
-        console.log(this.controlStates)
-      })
-      
-      this.player.drawPlayer()
-      setInterval(this.gameLoop, this.frameDelay)
+    addEventListener("keydown", evt => {
+      if (this.controls[evt.key])
+        this.controlStates[this.controls[evt.key]] = true;
+      this.movePlayerToDirection();
+      console.log(this.controlStates);
+    });
+
+    addEventListener("keyup", evt => {
+      if (this.controls[evt.key])
+        this.controlStates[this.controls[evt.key]] = false;
+      console.log(this.controlStates);
+    });
+
+    this.drawEnd();
+    this.player.drawPlayer();
+    if (this.camera) {
+      this.camera.setCameraTargetPosition(this.player.getPixelPosition());
+      this.camera.setCameraDirection(this.player.direction);
+    }
+    this.gameInterval = setInterval(this.gameLoop, this.frameDelay);
   }
 
-  gameLoop(){
+  movePlayerToDirection() {
     let moved = false;
     Object.keys(this.controlStates).map(direction => {
-      if(!moved && this.controlStates[direction]){
-        this.player.direction = direction;
+      direction = +direction;
+      if (!moved && this.controlStates[direction]) {
+        this.cachedDirection = this.relativeDirectionToAbsolute(direction);
       }
-    })
-    this.player.movePlayer();
-    moved = true
-    this.player.drawPlayer()
+    });
+  }
+
+  gameLoop() {
+    if (
+      this.cachedDirection &&
+      this.player.direction % 2 != this.cachedDirection % 2 &&
+      !this.player.wallOnDirection(this.cachedDirection)
+    ) {
+      this.player.direction = this.cachedDirection;
+    }
+    if (this.player.movePlayer()) {
+      this.gameStop = true;
+      this.gameLost();
+    }
+    this.drawEnd();
+    this.player.drawPlayer();
+
+    if (this.camera) {
+      this.camera.setCameraTargetPosition(this.player.getPixelPosition());
+      this.camera.setCameraDirection(this.player.direction);
+    }
+
+    if (this.player.x == this.end.x && this.player.y == this.end.y) {
+      this.gameStop = true;
+      this.gameWon();
+    }
+
+    if (this.gameStop) {
+      clearInterval(this.gameInterval);
+    }
+  }
+
+  drawEnd() {
+    this.maze.drawRect(this.end.x, this.end.y, this.colors.endColor);
+  }
+
+  gameWon() {
+    console.log(`game won`);
+  }
+
+  gameLost() {
+    console.log(`game lost`);
+  }
+
+  /**
+   * convert relative direction to absolute
+   * @param {Number} relativeDirection direction, relative to the player's orientation
+   */
+  relativeDirectionToAbsolute(relativeDirection) {
+    const out = relativeDirection + this.player.direction - 1;
+
+    return out > 4 ? out % 4 : out;
   }
 }
 
-  let mazeSize = 10;
+let mazeSize = 20;
 maze1 = new maze(mazeSize);
 maze1.drawMaze(true);
 
 game1 = new Game(maze1);
 game1.start();
-

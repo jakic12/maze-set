@@ -27,7 +27,7 @@ body {
 }
 
 #mainCanvas {
-  position: relative;
+  position: absolute;
   /* margin: 20px 10px 0 0; */
   border-radius: 3px;
   background: white;
@@ -39,6 +39,7 @@ body {
 
 .canvasWrapper {
   margin: 20px;
+  position: relative;
 }
 
 .page {
@@ -47,6 +48,7 @@ body {
   border-radius: 3px;
   padding: 20px 100px;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .white {
