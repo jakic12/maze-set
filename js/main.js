@@ -393,7 +393,42 @@ class Player {
     return this.maze.cellToPixelCoordinates({ x: this.x, y: this.y });
   }
 }
+class Sound {
+  constructor(src, bpm, beatCallback) {
+    this.dom = document.createElement("audio");
+    this.dom.src = src;
+    this.dom.setAttribute("preload", "auto");
+    this.dom.setAttribute("controls", "none");
+    this.dom.style.display = "none";
+    document.body.appendChild(this.dom);
+    this.bpm = bpm;
+    this.beatCallbacks = [beatCallback];
+  }
 
+  removeCallback(f) {
+    this.beatCallbacks = this.beatCallbacks.filter(g => g !== f);
+  }
+
+  addCallback(f) {
+    this.beatCallbacks.push(f);
+  }
+
+  play() {
+    this.dom.play();
+    if (this.bpm) {
+      this.interval = setInterval(() => {
+        this.beatCallbacks.map(f => f());
+      }, 1000 / (this.bpm / 60));
+    }
+  }
+
+  stop() {
+    this.dom.pause();
+    if (this.interval) {
+      clearInterval(this.interval);
+    }
+  }
+}
 class Camera {
   constructor(canvas, settings) {
     this.moveSpeed = (settings && settings.moveSpeed) || 0.2;
@@ -504,6 +539,7 @@ class Camera {
 
   setCameraDirection(direction) {
     const prevDir = this.direction;
+
     switch (direction) {
       case DIR.TOP:
         this.setCameraTargetRotation(0);
@@ -548,13 +584,18 @@ class Game {
     this.maze = maze;
     this.end = end;
     this.colors = colors;
+    this.music = {
+      120: `music/tya.mp3`
+    };
 
     this.camera = new Camera(canvas);
 
     this.gameLoop = this.gameLoop.bind(this);
+    this.handleKeyDown = this.handleKeyDown.bind(this);
+    this.handleKeyUp = this.handleKeyUp.bind(this);
   }
 
-  start() {
+  prepare() {
     if (this.camera) {
       this.camera.startCamera();
     }
@@ -576,18 +617,8 @@ class Game {
       this.colors.trailColor
     );
 
-    addEventListener("keydown", evt => {
-      if (this.controls[evt.key])
-        this.controlStates[this.controls[evt.key]] = true;
-      this.movePlayerToDirection();
-      console.log(this.controlStates);
-    });
-
-    addEventListener("keyup", evt => {
-      if (this.controls[evt.key])
-        this.controlStates[this.controls[evt.key]] = false;
-      console.log(this.controlStates);
-    });
+    addEventListener("keydown", this.handleKeyDown);
+    addEventListener("keyup", this.handleKeyUp);
 
     this.drawEnd();
     this.player.drawPlayer();
@@ -595,7 +626,26 @@ class Game {
       this.camera.setCameraTargetPosition(this.player.getPixelPosition());
       this.camera.setCameraDirection(this.player.direction);
     }
-    this.gameInterval = setInterval(this.gameLoop, this.frameDelay);
+  }
+
+  handleKeyDown(evt) {
+    if (this.controls[evt.key])
+      this.controlStates[this.controls[evt.key]] = true;
+    this.movePlayerToDirection();
+    console.log(this.controlStates);
+  }
+
+  handleKeyUp(evt) {
+    if (this.controls[evt.key])
+      this.controlStates[this.controls[evt.key]] = false;
+    console.log(this.controlStates);
+  }
+
+  start(resetBackground) {
+    if (!this.backgroundMusic || resetBackground)
+      this.backgroundMusic = new Sound(this.music[120], 120, this.gameLoop);
+    else this.backgroundMusic.addCallback(this.gameLoop);
+    this.backgroundMusic.play();
   }
 
   movePlayerToDirection() {
@@ -634,7 +684,7 @@ class Game {
     }
 
     if (this.gameStop) {
-      clearInterval(this.gameInterval);
+      this.backgroundMusic.removeCallback(this.gameLoop);
     }
   }
 
@@ -648,6 +698,14 @@ class Game {
 
   gameLost() {
     console.log(`game lost`);
+  }
+
+  reset() {
+    removeEventListener("keydown", this.handleKeyDown);
+    removeEventListener("keyup", this.handleKeyUp);
+
+    this.camera.stopCamera();
+    this.prepare();
   }
 
   /**
@@ -666,4 +724,8 @@ maze1 = new maze(mazeSize);
 maze1.drawMaze(true);
 
 game1 = new Game(maze1);
-game1.start();
+game1.prepare();
+document.addEventListener(`click`, () => {
+  if (game1.gameStop) game1.reset();
+  game1.start();
+});
