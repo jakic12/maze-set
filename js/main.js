@@ -394,15 +394,20 @@ class Player {
   }
 }
 class Sound {
-  constructor(src, bpm, beatCallback) {
+  constructor(songs, bpm, beatCallback) {
     this.dom = document.createElement("audio");
-    this.dom.src = src;
+    this.songId = 0;
+    this.songs = songs;
+    this.dom.src = songs[this.songId];
     this.dom.setAttribute("preload", "auto");
     this.dom.setAttribute("controls", "none");
     this.dom.style.display = "none";
     document.body.appendChild(this.dom);
     this.bpm = bpm;
     this.beatCallbacks = [beatCallback];
+    this.dom.addEventListener("ended", () => {
+      this.ended();
+    });
   }
 
   removeCallback(f) {
@@ -428,6 +433,14 @@ class Sound {
       clearInterval(this.interval);
       this.interval = undefined;
     }
+  }
+
+  ended() {
+    this.stop();
+    this.songId = (this.songId + 1) % this.songs.length;
+    this.dom.src = this.songs[this.songId];
+    this.dom.load();
+    this.play();
   }
 }
 
@@ -620,7 +633,8 @@ class Game {
     this.end = end;
     this.colors = colors;
     this.music = {
-      120: `music/tya.mp3`
+      120: [`music/tya.mp3`],
+      214: [`music/214-1.mp3`]
     };
     this.bpm = bpm;
 
@@ -685,7 +699,11 @@ class Game {
 
   start(resetBackground) {
     if (!this.backgroundMusic || resetBackground)
-      this.backgroundMusic = new Sound(this.music[this.bpm], this.bpm, this.gameLoop);
+      this.backgroundMusic = new Sound(
+        this.music[this.bpm],
+        this.bpm,
+        this.gameLoop
+      );
     else this.backgroundMusic.addCallback(this.gameLoop);
     this.backgroundMusic.play();
     if (!this.glow) {
@@ -741,7 +759,7 @@ class Game {
   gameWon() {
     console.log(`game won`);
     document.getElementById("win").style.display = "flex";
-    if(this.lastDeaths == 0){
+    if (this.lastDeaths == 0) {
       this.streak += 1;
     }
     this.lastDeaths = 0;
@@ -763,14 +781,14 @@ class Game {
 
     this.camera.stopCamera();
     this.gameStop = true;
-    if(resetMaze){
-      this.maze = new maze(this.maze.cellCount+1);
-      this.end = { x: this.maze.cellCount - 1, y: this.maze.cellCount - 1 }
+    if (resetMaze) {
+      this.maze = new maze(this.maze.cellCount + 1);
+      this.end = { x: this.maze.cellCount - 1, y: this.maze.cellCount - 1 };
     }
     this.prepare();
   }
 
-  updatePlayerStats(){
+  updatePlayerStats() {
     document.getElementById("deaths").innerHTML = this.lastDeaths;
     document.getElementById("levels").innerHTML = this.levelsDone;
     document.getElementById("streak").innerHTML = this.streak;
@@ -798,9 +816,8 @@ function startGame(bpm) {
   document.getElementById("score").style.display = "block";
   document.getElementById("startScreen").style.opacity = 0;
   setTimeout(() => {
-    if(bpm)
-      game1.bpm = bpm;
-      
+    if (bpm) game1.bpm = bpm;
+
     game1.start();
     document.getElementById("startScreen").style.display = `none`;
   }, 1500);
