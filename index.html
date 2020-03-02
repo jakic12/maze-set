@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Document</title>
+    <title>Maze madness</title>
     <link rel="stylesheet" href="css/main.css" />
     <link
       href="https://fonts.googleapis.com/css?family=Rubik&display=swap"
@@ -20,6 +20,25 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+    <div id="startScreen" class="fullScreenScreen">
+      <div class="inner">
+        <h1>Maze madness</h1>
+        <button onClick="startGame()">Play</button>
+        <img class="controlsImage" src="img/controls.png" alt="controls" />
+      </div>
+    </div>
+    <div id="reset" style="display: none;" class="fullScreenScreen">
+      <div class="inner">
+        <h1>You lost</h1>
+        <button onClick="resetGame()">Reset</button>
+      </div>
+    </div>
+    <div id="win" style="display: none;" class="fullScreenScreen">
+      <div class="inner">
+        <h1>You won</h1>
+        <button onClick="resetGame()">Play again</button>
       </div>
     </div>
     <script src="js/main.js"></script>

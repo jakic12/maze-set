@@ -23,7 +23,7 @@ body {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: rgb(51, 54, 57);
+  background: black;
 }
 
 #mainCanvas {
@@ -189,4 +189,47 @@ body {
   bottom: -5px;
   left: 5px;
   transform: rotate(45deg);
+}
+
+#startScreen {
+  background: black !important;
+}
+
+.fullScreenScreen {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  flex-direction: row;
+  align-items: center;
+  opacity: 100;
+  transition: opacity 1s;
+  background: rgba(0, 0, 0, 0.596);
+}
+
+.inner {
+  background: white;
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  border-radius: 5px;
+  align-items: center;
+}
+
+button {
+  padding: 10px;
+  border: none;
+  color: white;
+  background: black;
+  border-radius: 5px;
+  width: 100%;
+}
+
+.controlsImage {
+  padding: 20px;
+  width: 7em;
 }

@@ -124,7 +124,7 @@ class cell {
   }
 
   drawWalls() {
-    ctx.strokeStyle = `#fff`;
+    ctx.strokeStyle = `#1F2833`;
     this.walls.forEach((w, i) => {
       if (w) {
         const wallLine = this.getWallPosition(i + 1);
@@ -339,8 +339,8 @@ class Player {
     y,
     direction,
     maze,
-    playerColor = "blue",
-    trailColor = "green"
+    playerColor = "#66FCF1",
+    trailColor = "#45A29E"
   ) {
     this.x = x;
     this.y = y;
@@ -415,7 +415,7 @@ class Sound {
 
   play() {
     this.dom.play();
-    if (this.bpm) {
+    if (this.bpm && !this.interval) {
       this.interval = setInterval(() => {
         this.beatCallbacks.map(f => f());
       }, 1000 / (this.bpm / 60));
@@ -426,22 +426,55 @@ class Sound {
     this.dom.pause();
     if (this.interval) {
       clearInterval(this.interval);
+      this.interval = undefined;
     }
   }
 }
+
+class Glow {
+  constructor(dom, color) {
+    this.glowAmmout = 0;
+    this.dom = dom;
+    this.glowLoop = this.glowLoop.bind(this);
+    this.interval = setInterval(this.glowLoop, 0);
+    this.glowSpeed = 0.01;
+    this.color = color;
+  }
+
+  stop() {
+    clearInterval(this.interval);
+  }
+
+  glowBeat() {
+    this.glowAmmout = 1;
+  }
+
+  glowLoop() {
+    this.dom.style.boxShadow = `0px 0px 14px ${this.glowAmmout * 17 - 8}px ${
+      this.color
+    }`;
+    if (this.glowAmmout > 0) {
+      this.glowAmmout -= this.glowSpeed;
+    }
+  }
+}
+
 class Camera {
   constructor(canvas, settings) {
-    this.moveSpeed = (settings && settings.moveSpeed) || 0.2;
-    this.rotationSpeed = (settings && settings.rotationSpeed) || 0.2;
+    this.moveSpeed = (settings && settings.moveSpeed) || 0.006;
+    this.rotationSpeed = (settings && settings.rotationSpeed) || 0.03;
     this.canvas = canvas;
 
     this.cameraLoop = this.cameraLoop.bind(this);
   }
 
   startCamera() {
-    this.stop = false;
-    this.canvas.style.transformOrigin = `50% 50%`;
-    this.cameraLoop();
+    if (!this.started) {
+      this.stop = false;
+      this.canvas.style.transformOrigin = `50% 50%`;
+      this.interval = setInterval(this.cameraLoop, 0);
+      this.started = true;
+    }
   }
 
   /**
@@ -451,11 +484,12 @@ class Camera {
     this.moveCameraInternal();
     this.rotateCameraInternal();
     this.updateTransform();
-    if (!this.stop) requestAnimationFrame(this.cameraLoop);
   }
 
   stopCamera() {
     this.stop = true;
+    this.started = false;
+    clearInterval(this.interval);
   }
 
   /**
@@ -572,9 +606,9 @@ class Game {
     },
     end = { x: maze.cellCount - 1, y: maze.cellCount - 1 },
     colors = {
-      playerColor: "blue",
-      trailColor: "green",
-      endColor: "red"
+      playerColor: "#EE4540",
+      trailColor: "#801336",
+      endColor: "#C72C41"
     },
     cameraMode = true
   ) {
@@ -596,6 +630,7 @@ class Game {
   }
 
   prepare() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (this.camera) {
       this.camera.startCamera();
     }
@@ -646,6 +681,10 @@ class Game {
       this.backgroundMusic = new Sound(this.music[120], 120, this.gameLoop);
     else this.backgroundMusic.addCallback(this.gameLoop);
     this.backgroundMusic.play();
+    if (!this.glow) {
+      this.glow = new Glow(canvas, this.colors.playerColor);
+      this.backgroundMusic.addCallback(() => this.glow.glowBeat());
+    }
   }
 
   movePlayerToDirection() {
@@ -694,10 +733,12 @@ class Game {
 
   gameWon() {
     console.log(`game won`);
+    document.getElementById("win").style.display = "flex";
   }
 
   gameLost() {
     console.log(`game lost`);
+    document.getElementById("reset").style.display = "flex";
   }
 
   reset() {
@@ -705,6 +746,7 @@ class Game {
     removeEventListener("keyup", this.handleKeyUp);
 
     this.camera.stopCamera();
+    this.gameStop = true;
     this.prepare();
   }
 
@@ -725,7 +767,24 @@ maze1.drawMaze(true);
 
 game1 = new Game(maze1);
 game1.prepare();
-document.addEventListener(`click`, () => {
+/*document.addEventListener(`click`, () => {
   if (game1.gameStop) game1.reset();
   game1.start();
-});
+});*/
+
+function startGame() {
+  document.getElementById("startScreen").style.opacity = 0;
+  setTimeout(() => {
+    game1.start();
+    document.getElementById("startScreen").style.display = `none`;
+  }, 1500);
+}
+
+function resetGame() {
+  document.getElementById("reset").style.display = "none";
+  document.getElementById("win").style.display = "none";
+  game1.reset();
+  setTimeout(() => {
+    game1.start();
+  }, 1500);
+}
