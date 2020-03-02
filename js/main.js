@@ -807,7 +807,7 @@ class Game {
   }
 }
 
-let mazeSize = 20;
+let mazeSize = 10;
 maze1 = new maze(mazeSize);
 maze1.drawMaze(true);
 
