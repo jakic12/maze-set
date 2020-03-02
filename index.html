@@ -22,10 +22,18 @@
         </div>
       </div>
     </div>
+    <div id="score" class="inner">
+      <div>
+        deaths in this level: <strong id="deaths"></strong><br />
+        levels completed: <strong id="levels"></strong><br />
+        perfect streak: <strong id="streak"></strong><br />
+      </div>
+    </div>
     <div id="startScreen" class="fullScreenScreen">
       <div class="inner">
         <h1>Maze madness</h1>
         <button onClick="startGame()">Play</button>
+        <button onClick="startGame(200)" class="hard">Play Harder</button>
         <img class="controlsImage" src="img/controls.png" alt="controls" />
       </div>
     </div>
@@ -38,7 +46,7 @@
     <div id="win" style="display: none;" class="fullScreenScreen">
       <div class="inner">
         <h1>You won</h1>
-        <button onClick="resetGame()">Play again</button>
+        <button onClick="resetGame(true)">Play again</button>
       </div>
     </div>
     <script src="js/main.js"></script>

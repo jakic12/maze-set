@@ -610,7 +610,8 @@ class Game {
       trailColor: "#801336",
       endColor: "#C72C41"
     },
-    cameraMode = true
+    cameraMode = true,
+    bpm = 120
   ) {
     this.controls = controls;
     this.controlStates = {};
@@ -621,15 +622,21 @@ class Game {
     this.music = {
       120: `music/tya.mp3`
     };
+    this.bpm = bpm;
 
     this.camera = new Camera(canvas);
 
     this.gameLoop = this.gameLoop.bind(this);
     this.handleKeyDown = this.handleKeyDown.bind(this);
     this.handleKeyUp = this.handleKeyUp.bind(this);
+
+    this.levelsDone = 0;
+    this.streak = 0;
+    this.lastDeaths = 0;
   }
 
   prepare() {
+    this.updatePlayerStats();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (this.camera) {
       this.camera.startCamera();
@@ -678,7 +685,7 @@ class Game {
 
   start(resetBackground) {
     if (!this.backgroundMusic || resetBackground)
-      this.backgroundMusic = new Sound(this.music[120], 120, this.gameLoop);
+      this.backgroundMusic = new Sound(this.music[this.bpm], this.bpm, this.gameLoop);
     else this.backgroundMusic.addCallback(this.gameLoop);
     this.backgroundMusic.play();
     if (!this.glow) {
@@ -734,20 +741,39 @@ class Game {
   gameWon() {
     console.log(`game won`);
     document.getElementById("win").style.display = "flex";
+    if(this.lastDeaths == 0){
+      this.streak += 1;
+    }
+    this.lastDeaths = 0;
+    this.levelsDone += 1;
+    this.updatePlayerStats();
   }
 
   gameLost() {
     console.log(`game lost`);
     document.getElementById("reset").style.display = "flex";
+    this.lastDeaths += 1;
+    this.streak = 0;
+    this.updatePlayerStats();
   }
 
-  reset() {
+  reset(resetMaze) {
     removeEventListener("keydown", this.handleKeyDown);
     removeEventListener("keyup", this.handleKeyUp);
 
     this.camera.stopCamera();
     this.gameStop = true;
+    if(resetMaze){
+      this.maze = new maze(this.maze.cellCount+1);
+      this.end = { x: this.maze.cellCount - 1, y: this.maze.cellCount - 1 }
+    }
     this.prepare();
+  }
+
+  updatePlayerStats(){
+    document.getElementById("deaths").innerHTML = this.lastDeaths;
+    document.getElementById("levels").innerHTML = this.levelsDone;
+    document.getElementById("streak").innerHTML = this.streak;
   }
 
   /**
@@ -767,23 +793,23 @@ maze1.drawMaze(true);
 
 game1 = new Game(maze1);
 game1.prepare();
-/*document.addEventListener(`click`, () => {
-  if (game1.gameStop) game1.reset();
-  game1.start();
-});*/
 
-function startGame() {
+function startGame(bpm) {
+  document.getElementById("score").style.display = "block";
   document.getElementById("startScreen").style.opacity = 0;
   setTimeout(() => {
+    if(bpm)
+      game1.bpm = bpm;
+      
     game1.start();
     document.getElementById("startScreen").style.display = `none`;
   }, 1500);
 }
 
-function resetGame() {
+function resetGame(resetMaze) {
   document.getElementById("reset").style.display = "none";
   document.getElementById("win").style.display = "none";
-  game1.reset();
+  game1.reset(resetMaze);
   setTimeout(() => {
     game1.start();
   }, 1500);
