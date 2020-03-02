@@ -445,12 +445,12 @@ class Sound {
 }
 
 class Glow {
-  constructor(dom, color) {
-    this.glowAmmout = 0;
+  constructor(dom, color, bpm) {
+    this.glowAmount = 0;
     this.dom = dom;
     this.glowLoop = this.glowLoop.bind(this);
     this.interval = setInterval(this.glowLoop, 0);
-    this.glowSpeed = 0.01;
+    this.glowSpeed = (0.01 * bpm * 2) / 240;
     this.color = color;
   }
 
@@ -459,15 +459,18 @@ class Glow {
   }
 
   glowBeat() {
-    this.glowAmmout = 1;
+    this.glowAmount = 1;
   }
 
   glowLoop() {
-    this.dom.style.boxShadow = `0px 0px 14px ${this.glowAmmout * 17 - 8}px ${
+    this.dom.style.boxShadow = `0px 0px 14px ${this.glowAmount * 17 - 8}px ${
       this.color
     }`;
-    if (this.glowAmmout > 0) {
-      this.glowAmmout -= this.glowSpeed;
+    this.dom.parentElement.style.transform = ` scale(${this.glowAmount * 0.1 +
+      1})`;
+
+    if (this.glowAmount > 0) {
+      this.glowAmount -= this.glowSpeed;
     }
   }
 }
@@ -634,7 +637,8 @@ class Game {
     this.colors = colors;
     this.music = {
       120: [`music/tya.mp3`],
-      214: [`music/214-1.mp3`]
+      214: [`music/214-1.mp3`],
+      428: [`music/214-1.mp3`]
     };
     this.bpm = bpm;
 
@@ -660,7 +664,6 @@ class Game {
       0,
       0,
       this.maze.cells[0][0].walls.reduce((prev, value, index) => {
-        console.log(prev, value);
         if (prev == -1) {
           if (value == false) return index + 1;
           else return -1;
@@ -688,13 +691,11 @@ class Game {
     if (this.controls[evt.key])
       this.controlStates[this.controls[evt.key]] = true;
     this.movePlayerToDirection();
-    console.log(this.controlStates);
   }
 
   handleKeyUp(evt) {
     if (this.controls[evt.key])
       this.controlStates[this.controls[evt.key]] = false;
-    console.log(this.controlStates);
   }
 
   start(resetBackground) {
@@ -707,7 +708,7 @@ class Game {
     else this.backgroundMusic.addCallback(this.gameLoop);
     this.backgroundMusic.play();
     if (!this.glow) {
-      this.glow = new Glow(canvas, this.colors.playerColor);
+      this.glow = new Glow(canvas, this.colors.playerColor, this.bpm);
       this.backgroundMusic.addCallback(() => this.glow.glowBeat());
     }
   }
@@ -789,6 +790,7 @@ class Game {
   }
 
   updatePlayerStats() {
+    document.getElementById("bpm_display").innerHTML = this.bpm;
     document.getElementById("deaths").innerHTML = this.lastDeaths;
     document.getElementById("levels").innerHTML = this.levelsDone;
     document.getElementById("streak").innerHTML = this.streak;
@@ -831,3 +833,17 @@ function resetGame(resetMaze) {
     game1.start();
   }, 1500);
 }
+
+document.getElementById("leftMobile").addEventListener("touchstart", () => {
+  dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
+});
+document.getElementById("leftMobile").addEventListener("touchend", () => {
+  dispatchEvent(new KeyboardEvent("keyup", { key: "ArrowLeft" }));
+});
+
+document.getElementById("rightMobile").addEventListener("touchstart", () => {
+  dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
+});
+document.getElementById("rightMobile").addEventListener("touchend", () => {
+  dispatchEvent(new KeyboardEvent("keyup", { key: "ArrowRight" }));
+});

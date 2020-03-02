@@ -2,6 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Maze madness</title>
     <link rel="stylesheet" href="css/main.css" />
     <link
@@ -24,6 +25,7 @@
     </div>
     <div id="score" class="inner">
       <div>
+        bpm: <strong id="bpm_display"></strong><br />
         deaths in this level: <strong id="deaths"></strong><br />
         levels completed: <strong id="levels"></strong><br />
         perfect streak: <strong id="streak"></strong><br />
@@ -32,10 +34,15 @@
     <div id="startScreen" class="fullScreenScreen">
       <div class="inner">
         <h1>Maze madness</h1>
-        <button onClick="startGame()">Play</button>
+        <button onClick="startGame()" class="normal">Play</button>
         <button onClick="startGame(214)" class="hard">Play Harder</button>
+        <button onClick="startGame(428)" class="harder">Play Insanity</button>
         <img class="controlsImage" src="img/controls.png" alt="controls" />
       </div>
+    </div>
+    <div class="mobileOnlyControls">
+      <div class="button left" id="leftMobile">&lsaquo;</div>
+      <div class="button right" id="rightMobile">&rsaquo;</div>
     </div>
     <div id="reset" style="display: none;" class="fullScreenScreen">
       <div class="inner">
