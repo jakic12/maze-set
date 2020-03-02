@@ -638,7 +638,7 @@ class Game {
     this.music = {
       120: [`music/tya.mp3`],
       214: [`music/214-1.mp3`],
-      428: [`music/214-1.mp3`]
+      348: [`music/Fox_Stevenson_Curbi_-_Hoohah_(VIP Edit).mp3`]
     };
     this.bpm = bpm;
 

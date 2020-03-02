@@ -257,7 +257,7 @@ button:hover {
 }
 
 .harder:hover {
-  animation: blinkingText 10ms infinite;
+  animation: blinkingText 172ms infinite;
 }
 
 @keyframes blinkingText {
