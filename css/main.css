@@ -279,7 +279,7 @@ button:hover {
 }
 
 .mobileOnlyControls {
-  display: none;
+  display: flex;
   position: absolute;
   left: 0;
   top: 0;
@@ -294,8 +294,8 @@ button:hover {
   flex-grow: 1;
 }
 
-@media screen and (max-width: 600px) {
+/*@media screen and (max-width: 600px) {
   .mobileOnlyControls {
     display: flex;
   }
-}
+}*/
