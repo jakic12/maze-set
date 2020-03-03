@@ -398,7 +398,7 @@ class Sound {
     this.dom = document.createElement("audio");
     this.songId = 0;
     this.songs = songs;
-    this.dom.src = songs[this.songId];
+    this.dom.src = songs[this.songId].src;
     this.dom.setAttribute("preload", "auto");
     this.dom.setAttribute("controls", "none");
     this.dom.style.display = "none";
@@ -421,10 +421,23 @@ class Sound {
   play() {
     this.dom.play();
     if (this.bpm && !this.interval) {
-      this.interval = setInterval(() => {
-        this.beatCallbacks.map(f => f());
-      }, 1000 / (this.bpm / 60));
+      setTimeout(() => {
+        this.interval = setInterval(() => {
+          document.getElementById("songProgress").style.width =
+            document.getElementById("songProgress").parentElement.clientWidth *
+              (this.dom.currentTime / this.dom.duration) +
+            `px`;
+          this.beatCallbacks.map(f => f());
+        }, 1000 / (this.bpm / 60));
+      }, this.offset || 0);
     }
+    document.getElementById("songLink").href = this.songs[this.songId].link;
+    document.getElementById("songArtist").innerHTML = this.songs[
+      this.songId
+    ].artist;
+    document.getElementById("songTitle").innerHTML = this.songs[
+      this.songId
+    ].title;
   }
 
   stop() {
@@ -438,7 +451,7 @@ class Sound {
   ended() {
     this.stop();
     this.songId = (this.songId + 1) % this.songs.length;
-    this.dom.src = this.songs[this.songId];
+    this.dom.src = this.songs[this.songId].src;
     this.dom.load();
     this.play();
   }
@@ -636,9 +649,56 @@ class Game {
     this.end = end;
     this.colors = colors;
     this.music = {
-      120: [`music/tya.mp3`],
-      214: [`music/214-1.mp3`],
-      348: [`music/Fox_Stevenson_Curbi_-_Hoohah_(VIP Edit).mp3`]
+      120: [
+        {
+          title: `The Year After`,
+          artist: `French 79`,
+          offset: 0,
+          src: `music/tya.mp3`,
+          link: `https://www.youtube.com/watch?v=B834hDNnC8s`
+        }
+      ],
+      214: [
+        {
+          title: `Mass Defect`,
+          artist: `FELE`,
+          offset: 0,
+          src: `music/214-1.mp3`,
+          link: `https://www.youtube.com/watch?v=wr6rZ4mHjaw`
+        }
+      ],
+      348: shuffle([
+        {
+          artist: `Noisestorm, VIP`,
+          title: `Breakdown`,
+          offset: 174,
+          src: `music/Noisestorm - Breakdown VIP.mp3`,
+          link: `https://www.youtube.com/watch?v=pJVH9CZSkYo`
+        },
+        {
+          artist: `Fox Stevenson, VIP`,
+          title: `Hoohah`,
+          offset: 0,
+          src: `music/Fox_Stevenson_Curbi_-_Hoohah_(VIP Edit).mp3`,
+          link: `https://www.youtube.com/watch?v=Hv5E-Dl7r5c`
+        },
+        {
+          artist: "Andy C",
+          title: "Heartbeat Loud - Extended Version",
+          src: `music/Heartbeat Loud (Extended Version).mp3`,
+          link: `https://www.youtube.com/watch?v=CYtsnl9Hy6c`,
+          offset: 25
+        },
+        {
+          artist: "Pendulum",
+          title: "Slam",
+          link: `https://www.youtube.com/watch?v=Q89OdbX7A8E`,
+          src: `music/Pendulum - Slam [HD - 320kbps].mp3`,
+          offset: 171
+        }
+        //{ artist: "Neonlight", title: "Heavy Bettie" },
+        //{ artist: "InsideInfo", title: "I Am Something Else" }
+      ])
     };
     this.bpm = bpm;
 

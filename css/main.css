@@ -299,3 +299,22 @@ button:hover {
     display: flex;
   }
 }*/
+
+.songDisplay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  padding: 10px;
+  text-decoration: none;
+}
+
+#songProgress {
+  height: 3px;
+  background: #ee4540;
+  display: absolute;
+  left: 0;
+  bottom: 0;
+  width: 0;
+}
