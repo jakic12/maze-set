@@ -318,3 +318,8 @@ button:hover {
   bottom: 0;
   width: 0;
 }
+
+#songArtist{
+  text-decoration:none;
+  color:white;
+}
